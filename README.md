@@ -231,15 +231,21 @@ Berikut environment variables yang diperlukan (lihat `.env.example`):
 
 ```env
 # Database
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/rescuefood?schema=public"
+DATABASE_URL="postgresql://postgres:password123@127.0.0.1:5432/rescuefood?schema=public"
 
-# Auth Secret (REQUIRED in production)
-# Generate with: openssl rand -base64 32
-AUTH_SECRET="change-this-to-a-random-secret-in-production"
+# Midtrans Configuration (Sandbox)
+# Get your keys from: https://dashboard.sandbox.midtrans.com/settings/config_info
+MIDTRANS_SERVER_KEY=""
+MIDTRANS_CLIENT_KEY=""
+MIDTRANS_IS_PRODUCTION="false"
 
-# Environment
-NODE_ENV="development"
+# Set to "true" to enable demo mode (no real payment gateway)
+PAYMENT_DEMO_MODE="false"
 ```
+
+**Catatan Midtrans**:
+- Untuk development, bisa set `PAYMENT_DEMO_MODE="true"` agar tidak perlu konfigurasi Midtrans
+- Jika ingin test payment flow lengkap, daftar di [Midtrans Sandbox](https://dashboard.sandbox.midtrans.com/) dan isi `MIDTRANS_SERVER_KEY` dan `MIDTRANS_CLIENT_KEY`
 
 ## ⚠️ Important Notes
 
