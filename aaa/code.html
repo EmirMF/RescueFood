@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Order Management Detail - RescueFood</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#f8f9ff",
+                        "secondary-fixed-dim": "#4ae176",
+                        "error-container": "#ffdad6",
+                        "surface-container-highest": "#d9e3f6",
+                        "primary-container": "#15803d",
+                        "on-secondary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "tertiary-container": "#66726b",
+                        "on-secondary-fixed": "#002109",
+                        "on-primary-container": "#d3ffd5",
+                        "on-tertiary-fixed-variant": "#3e4943",
+                        "on-surface": "#121c2a",
+                        "surface-container-low": "#eff4ff",
+                        "surface-container": "#e6eeff",
+                        "on-primary-fixed": "#00210a",
+                        "on-primary": "#ffffff",
+                        "secondary-container": "#6bff8f",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-high": "#dee9fc",
+                        "surface-bright": "#f8f9ff",
+                        "inverse-on-surface": "#eaf1ff",
+                        "tertiary": "#4e5a53",
+                        "error": "#ba1a1a",
+                        "inverse-primary": "#79db8d",
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#3f493f",
+                        "on-secondary-fixed-variant": "#005321",
+                        "on-secondary-container": "#007432",
+                        "primary": "#00652c",
+                        "on-tertiary-fixed": "#131e19",
+                        "primary-fixed-dim": "#79db8d",
+                        "surface-variant": "#d9e3f6",
+                        "surface-dim": "#d0dbed",
+                        "on-tertiary-container": "#eaf7ee",
+                        "on-error": "#ffffff",
+                        "primary-fixed": "#95f8a7",
+                        "secondary-fixed": "#6bff8f",
+                        "tertiary-fixed": "#d9e6dd",
+                        "outline-variant": "#becabc",
+                        "on-primary-fixed-variant": "#005323",
+                        "on-background": "#121c2a",
+                        "tertiary-fixed-dim": "#bdcac1",
+                        "secondary": "#006e2f",
+                        "outline": "#6f7a6e",
+                        "background": "#f8f9ff",
+                        "inverse-surface": "#27313f",
+                        "surface-tint": "#006d30"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-mobile": "20px",
+                        "margin-desktop": "64px",
+                        "component-padding": "1.5rem",
+                        "gutter": "24px",
+                        "section-gap": "80px",
+                        "container-max": "1280px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Manrope"],
+                        "label-sm": ["Manrope"],
+                        "headline-xl": ["Manrope"],
+                        "headline-lg-mobile": ["Manrope"],
+                        "title-md": ["Manrope"],
+                        "body-md": ["Manrope"],
+                        "body-lg": ["Manrope"],
+                        "headline-lg": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "headline-xl": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "title-md": ["20px", { "lineHeight": "28px", "letterSpacing": "0em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "letterSpacing": "0.01em", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "letterSpacing": "0.01em", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[style*="FILL: 1"] {
+            font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        /* Custom scrollbar for chat */
+        .chat-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .chat-scroll::-webkit-scrollbar-thumb {
+            background-color: #becabc; /* outline-variant */
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<header class="bg-surface/80 dark:bg-surface-dim/80 backdrop-blur-xl docked full-width top-0 sticky z-50 border-b border-outline-variant/30 dark:border-outline/20 shadow-sm">
+<div class="flex justify-between items-center w-full px-margin-desktop py-4 max-w-container-max mx-auto">
+<div class="font-headline-lg text-headline-lg font-extrabold text-primary dark:text-secondary-fixed-dim">
+                RescueFood
+            </div>
+<nav class="hidden md:flex gap-8 items-center">
+<a class="text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors font-title-md text-title-md" href="#">Marketplace</a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors font-title-md text-title-md" href="#">Impact</a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors font-title-md text-title-md" href="#">Partners</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors font-label-md text-label-md hidden md:block">Login</button>
+<button class="bg-primary text-on-primary hover:bg-surface-container-high/50 dark:hover:bg-inverse-surface/30 rounded-full transition-all scale-95 active:scale-90 transition-transform duration-200 px-6 py-2 font-label-md text-label-md">Sign Up</button>
+<img alt="User profile" class="w-10 h-10 rounded-full object-cover border border-outline-variant/50 hidden md:block" data-alt="A highly detailed close up portrait of a young woman with a calm expression, softly lit with natural daylight against a neutral background. The style is modern, bright, and professional, perfectly fitting a light-mode corporate aesthetic with subtle earthy tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjAQWK_4Y493z0EaIkwkg4Zi0dqmpuJVDevBZGxXhL4wUOi_pCq4jXZFl4po-chrQXRux8DGVrIO7YaJbdCemDVovcARgSl0W49Ef2Xu8WboqC7dm383W90gFKDG11Rc6fVJr97TD6Et3SHARSE_SeGP1FsEV7BjIS5Pwsc9DOh1AwXEWdMraL_elEpEiIYMi-USscDcT2fF2v4W4x_0dGmV_LmAgvLLCtlsR5V3gueqcLl4ynweJiHeVrJspi0bncCyoJqq9LFLFH"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow w-full max-w-container-max mx-auto px-margin-desktop py-12 flex flex-col gap-8">
+<!-- Breadcrumb & Header -->
+<div class="flex flex-col gap-4">
+<a class="flex items-center gap-2 text-primary font-label-md text-label-md hover:underline w-fit" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="arrow_back">arrow_back</span>
+                Back to Orders
+            </a>
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+<div class="flex items-center gap-4">
+<h1 class="font-headline-xl text-headline-xl text-on-background">Order #RF-8492</h1>
+<span class="bg-surface-container-high text-on-surface px-3 py-1 rounded-full font-label-sm text-label-sm flex items-center gap-1 border border-outline-variant/30">
+<span class="material-symbols-outlined text-[14px]" data-icon="pending">pending</span>
+                        Pending Validation
+                    </span>
+</div>
+<div class="text-on-surface-variant font-body-md text-body-md flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]" data-icon="schedule">schedule</span>
+                    Placed Today at 14:30
+                </div>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-12 gap-gutter items-start">
+<!-- LEFT COLUMN: Order Details (8 cols) -->
+<div class="col-span-12 md:col-span-8 flex flex-col gap-gutter">
+<!-- Items Card -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 p-component-padding flex flex-col gap-6 relative overflow-hidden">
+<div class="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-[100px] -z-0"></div>
+<h2 class="font-title-md text-title-md text-on-surface relative z-10 border-b border-outline-variant/20 pb-4">Order Items</h2>
+<div class="flex flex-col gap-4 relative z-10">
+<!-- Item 1 -->
+<div class="flex items-center justify-between group">
+<div class="flex items-center gap-4">
+<div class="w-16 h-16 rounded-lg bg-surface-container overflow-hidden border border-outline-variant/30 flex-shrink-0">
+<img alt="Carrots" class="w-full h-full object-cover" data-alt="A vibrant overhead shot of fresh organic carrots with green leafy tops resting on a clean, bright white surface. The lighting is soft and diffused, highlighting the fresh, natural orange and green tones. The aesthetic is clean, minimalist, and focuses on healthy, sustainable produce." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7TXyIPefbpJLeggyi-ci0B2lzf13y1CkWXH76imtiJYa3927Gsflu-Ox773hO39LbM_SNuPwUL4-8lN81BoL7nA5fJg5u8RoEWEwqa55R1R72lv9MAZZPaR7o0GsNxOQnSfv1jRrQ-dSlruv3R8kVBourdUmytXFfsU3WCr1RNXnDtEXugYhtO0zEn_QG6TeYux8mjLBwM7x22TsucCcWV_iFUsc0xcqNq1zCDKkXaJiuIpA0nOAVQx5mIPf9TpvrKTFCLBoDrbvN"/>
+</div>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface">Imperfect Carrot Bundle</span>
+<span class="font-body-md text-body-md text-on-surface-variant">Locally sourced, minor blemishes</span>
+</div>
+</div>
+<div class="flex items-center gap-8 text-right">
+<span class="font-body-md text-body-md text-on-surface-variant">x 2</span>
+<span class="font-label-md text-label-md text-on-surface w-16">$4.50</span>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="flex items-center justify-between group">
+<div class="flex items-center gap-4">
+<div class="w-16 h-16 rounded-lg bg-surface-container overflow-hidden border border-outline-variant/30 flex-shrink-0">
+<img alt="Bread" class="w-full h-full object-cover" data-alt="A beautifully lit, close-up shot of an artisanal rustic sourdough bread loaf resting on a clean white surface with subtle soft shadows. The crust is golden brown and textured. The overall mood is warm, inviting, and high-quality, perfectly matching a premium food marketplace aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCBiz1T4AceofJkF0USTBEdB5D8ASZlbKr1AdqSGcpkPxJBVVBVfS2t_XlMq4Ngkg0ar0mG2_mZtm1OE0FwV97k55gIU1v_ZLkNfKW30JVd-8yt0kVJB62T2zZ-OOi47mcoZdBaymCMVJL1adCd7qC4dSBu9N7ekO90OZuk0zZKMjLUrzAf6bbjSB9eQH-MN1DvHO7N_DzIH_RJVf1jsaRCkUAapSBXXuBeDvh2OzmdlSEiM0kTPvl_ALY_JMnqG_Yd47qzdvtJGGkP"/>
+</div>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface">Day-old Sourdough Loaf</span>
+<span class="font-body-md text-body-md text-on-surface-variant">Bakery surplus, perfectly fresh for toasting</span>
+</div>
+</div>
+<div class="flex items-center gap-8 text-right">
+<span class="font-body-md text-body-md text-on-surface-variant">x 1</span>
+<span class="font-label-md text-label-md text-on-surface w-16">$3.00</span>
+</div>
+</div>
+</div>
+<!-- Subtotal Section -->
+<div class="mt-4 pt-4 border-t border-outline-variant/20 flex flex-col gap-2 relative z-10">
+<div class="flex justify-between items-center text-on-surface-variant font-body-md text-body-md">
+<span>Subtotal</span>
+<span>$12.00</span>
+</div>
+<div class="flex justify-between items-center text-on-surface-variant font-body-md text-body-md">
+<span>Platform Fee</span>
+<span>$0.50</span>
+</div>
+<div class="flex justify-between items-center mt-2 pt-2 text-on-surface font-title-md text-title-md">
+<span>Total Earnings</span>
+<span class="text-primary">$12.50</span>
+</div>
+</div>
+</section>
+<!-- Pickup Code Placeholder -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 p-component-padding flex flex-row items-center gap-6">
+<div class="w-16 h-16 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-[32px]" data-icon="qr_code_scanner">qr_code_scanner</span>
+</div>
+<div class="flex flex-col flex-grow">
+<h3 class="font-title-md text-title-md text-on-surface">Pickup Validation Code</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Ask the customer for their code when they arrive to complete the order.</p>
+</div>
+<div class="bg-surface-container py-3 px-6 rounded-lg border border-outline-variant/30 font-headline-lg-mobile text-headline-lg-mobile text-on-surface tracking-widest bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPgo8cmVjdCB3aWR0aD0iOCIgaGVpZ2h0PSI4IiBmaWxsPSIjZmZmZmZmIj48L3JlY3Q+CjxwYXRoIGQ9Ik0wIDBMOCA4Wk04IDBMMCA4WiIgc3Ryb2tlPSIjZTllOWU5IiBzdHJva2Utd2lkdGg9IjEiPjwvcGF0aD4KPC9zdmc+')]">
+                        - - - -
+                    </div>
+</section>
+</div>
+<!-- RIGHT COLUMN: Customer & Actions (4 cols) -->
+<div class="col-span-12 md:col-span-4 flex flex-col gap-gutter">
+<!-- Action Buttons -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 p-component-padding flex flex-col gap-4">
+<h2 class="font-title-md text-title-md text-on-surface hidden">Actions</h2>
+<button class="w-full bg-primary-container text-on-primary-container font-label-md text-label-md py-3 px-4 rounded-full hover:bg-primary transition-colors shadow-sm flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]" data-icon="check_circle">check_circle</span>
+                        Confirm Order
+                    </button>
+<button class="w-full bg-surface-container-lowest border-2 border-primary text-primary font-label-md text-label-md py-3 px-4 rounded-full opacity-50 cursor-not-allowed flex items-center justify-center gap-2" disabled="" title="Confirm order first">
+<span class="material-symbols-outlined text-[20px]" data-icon="inventory_2">inventory_2</span>
+                        Mark as Ready
+                    </button>
+<div class="w-full h-[1px] bg-outline-variant/30 my-2"></div>
+<button class="w-full bg-transparent text-error font-label-md text-label-md py-2 px-4 rounded-full hover:bg-error-container/20 transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]" data-icon="cancel">cancel</span>
+                        Cancel Order
+                    </button>
+</section>
+<!-- Customer Info -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 p-component-padding flex flex-col gap-4">
+<div class="flex items-center gap-4 border-b border-outline-variant/20 pb-4">
+<img alt="Customer Avatar" class="w-14 h-14 rounded-full object-cover border border-outline-variant/30" data-alt="A well-lit headshot of a friendly man with a slight smile, wearing casual clothing, set against a soft, out-of-focus background. The image has a warm, inviting, and professional tone, suitable for a trustworthy community marketplace profile picture." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAzm9-9t12v3WQZfsXfeaPhCyUUTJYT6UkdBsD62zMmdfDUPFMrni9T1FEpgilp9qojCPXvbbC7wQR2DSpDl8P1HqsYqiafc2H6J2NdCXdHe4uRMQUGXjXtBk3qp1Ra5NNBaCG7tzLiLKuY0gHioxE405oAVz-6bTJE7oms7i8GyTR-3p3UoeAqFKPuc9cJFEYVVq2lxw8xfqIEY2l8SqvWZnEF8h2PTlvgNhFOwymQa9mPT_NsauHDi2nP7jpHXfT30sgHWtcGn9y9"/>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface">Alex Mercer</span>
+<div class="flex items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-[16px]" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-sm text-label-sm">4.9</span>
+<span class="font-body-md text-body-md text-on-surface-variant ml-1">(12 orders)</span>
+</div>
+</div>
+</div>
+<!-- Chat Area -->
+<div class="flex flex-col gap-3 mt-2 h-64">
+<h3 class="font-title-md text-title-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]" data-icon="forum">forum</span>
+                            Messages
+                        </h3>
+<div class="flex-grow overflow-y-auto chat-scroll flex flex-col gap-3 pr-2">
+<!-- Customer Message -->
+<div class="bg-surface-container-low p-3 rounded-tr-xl rounded-bl-xl rounded-br-xl w-10/12 self-start border border-outline-variant/20">
+<p class="font-body-md text-body-md text-on-surface text-sm">Hi! Can I pick this up around 5 PM?</p>
+<span class="font-label-sm text-label-sm text-on-surface-variant text-[10px] block mt-1">14:35</span>
+</div>
+<!-- Merchant Message -->
+<div class="bg-primary/10 p-3 rounded-tl-xl rounded-bl-xl rounded-br-xl w-10/12 self-end border border-primary/20">
+<p class="font-body-md text-body-md text-on-surface text-sm">Hello Alex, absolutely. We close at 6 PM, so that works perfectly.</p>
+<span class="font-label-sm text-label-sm text-on-surface-variant text-[10px] block mt-1 text-right">14:40</span>
+</div>
+</div>
+<!-- Chat Input -->
+<div class="flex items-center gap-2 mt-auto pt-2 border-t border-outline-variant/20">
+<input class="flex-grow bg-surface-container rounded-full border-none focus:ring-2 focus:ring-primary font-body-md text-body-md px-4 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/50" placeholder="Type a message..." type="text"/>
+<button class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center hover:bg-primary transition-colors flex-shrink-0">
+<span class="material-symbols-outlined text-[18px]" data-icon="send">send</span>
+</button>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-container dark:bg-surface-dim full-width mt-section-gap">
+<div class="w-full px-margin-desktop py-12 flex flex-col md:flex-row justify-between items-center max-w-container-max mx-auto border-t border-outline-variant/20">
+<div class="font-title-md text-title-md font-bold text-on-surface dark:text-inverse-on-surface mb-6 md:mb-0">
+                RescueFood
+            </div>
+<div class="flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
+<div class="flex gap-6">
+<a class="text-on-surface-variant dark:text-surface-variant font-body-md text-body-md hover:text-primary dark:hover:text-primary-fixed-dim underline transition-all opacity-80 hover:opacity-100" href="#">Privacy Policy</a>
+<a class="text-on-surface-variant dark:text-surface-variant font-body-md text-body-md hover:text-primary dark:hover:text-primary-fixed-dim underline transition-all opacity-80 hover:opacity-100" href="#">Terms of Service</a>
+<a class="text-on-surface-variant dark:text-surface-variant font-body-md text-body-md hover:text-primary dark:hover:text-primary-fixed-dim underline transition-all opacity-80 hover:opacity-100" href="#">Cookie Settings</a>
+<a class="text-on-surface-variant dark:text-surface-variant font-body-md text-body-md hover:text-primary dark:hover:text-primary-fixed-dim underline transition-all opacity-80 hover:opacity-100" href="#">Contact Us</a>
+</div>
+<span class="text-on-surface-variant dark:text-surface-variant font-body-md text-body-md text-sm mt-4 md:mt-0">
+                    © 2024 RescueFood. Together for a sustainable future. 12kg CO2 saved.
+                </span>
+</div>
+</div>
+</footer>
+</body></html>

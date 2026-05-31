@@ -1,0 +1,266 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  CUSTOMER
+  MERCHANT
+  CHARITY
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum ListingMode {
+  SALE
+  DONATION
+}
+
+enum ListingStatus {
+  DRAFT
+  ACTIVE
+  SOLD_OUT
+  EXPIRED
+  REMOVED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  READY_FOR_PICKUP
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+  REFUNDED
+}
+
+enum DonationClaimStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  COMPLETED
+  CANCELLED
+}
+
+enum NotificationType {
+  ORDER_CONFIRMED
+  ORDER_READY
+  ORDER_COMPLETED
+  ORDER_CANCELLED
+  CLAIM_APPROVED
+  CLAIM_REJECTED
+  CLAIM_COMPLETED
+  LISTING_SOLD_OUT
+  LISTING_EXPIRING
+  MERCHANT_VERIFIED
+  CHARITY_VERIFIED
+  NEW_ORDER
+  NEW_CLAIM
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         UserRole
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  merchant      Merchant?
+  charity       Charity?
+  orders        Order[]
+  reviews       Review[]
+  wishlists     Wishlist[]
+  notifications Notification[]
+  messages      Message[]
+}
+
+model Merchant {
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  businessName       String
+  address            String
+  latitude           Float?
+  longitude          Float?
+  phone              String
+  verificationStatus VerificationStatus @default(PENDING)
+  averageRating      Float              @default(0)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listings       FoodListing[]
+  orders         Order[]
+  donationClaims DonationClaim[]
+  reviews        Review[]
+}
+
+model Charity {
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  organizationName   String
+  address            String
+  verificationStatus VerificationStatus @default(PENDING)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  donationClaims DonationClaim[]
+}
+
+model FoodListing {
+  id              String        @id @default(cuid())
+  merchantId      String
+  title           String
+  description     String
+  category        String
+  imageUrl        String
+  originalPrice   Int
+  discountedPrice Int
+  quantity        Int
+  mode            ListingMode
+  pickupLocation  String
+  pickupLatitude  Float?
+  pickupLongitude Float?
+  pickupStartTime DateTime
+  pickupEndTime   DateTime
+  consumeBefore   DateTime
+  allergenInfo    String?
+  impactKgCo2     Int           @default(0)
+  status          ListingStatus @default(DRAFT)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  merchant       Merchant        @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  orders         Order[]
+  donationClaims DonationClaim[]
+  wishlists      Wishlist[]
+}
+
+model Order {
+  id                String        @id @default(cuid())
+  customerId        String
+  listingId         String
+  merchantId        String
+  quantity          Int
+  adminFee          Int           @default(0)
+  totalPrice        Int
+  status            OrderStatus   @default(PENDING)
+  pickupCode        String
+  paymentStatus     PaymentStatus @default(PENDING)
+  paymentMethod     String?
+  midtransToken     String?
+  midtransOrderId   String?       @unique
+  paidAt            DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  customer User        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  listing  FoodListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  merchant Merchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  review   Review?
+  messages Message[]
+}
+
+model AppSetting {
+  key       String   @id
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DonationClaim {
+  id         String              @id @default(cuid())
+  charityId  String
+  listingId  String
+  merchantId String
+  quantity   Int
+  status     DonationClaimStatus @default(REQUESTED)
+  pickupCode String
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  charity  Charity     @relation(fields: [charityId], references: [id], onDelete: Cascade)
+  listing  FoodListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  merchant Merchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  orderId    String   @unique
+  customerId String
+  merchantId String
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  customer User     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+}
+
+model Wishlist {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+  createdAt DateTime @default(now())
+
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing FoodListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@index([userId])
+  @@index([listingId])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  actionUrl String?
+  metadata  String? // JSON string for additional data
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  orderId   String
+  senderId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  order  Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  sender User  @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+}

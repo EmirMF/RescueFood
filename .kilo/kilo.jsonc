@@ -1,0 +1,10 @@
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "mcp": {
+    "stitch": {
+      "type": "local",
+      "command": ["npx", "-y", "@kilocode/mcp-server-stitch"],
+      "enabled": true
+    }
+  }
+}
