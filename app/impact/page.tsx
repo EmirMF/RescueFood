@@ -43,7 +43,7 @@ export default async function ImpactPage() {
 
   return (
     <main className="min-h-screen bg-background">
-      <AppHeader active="impact" actions={[{ href: "/", label: "Marketplace" }]} />
+      <AppHeader active="impact" actions={[{ href: "/marketplace", label: "Marketplace" }]} />
 
       <section className="mx-auto max-w-7xl px-5 py-8 md:px-8 md:py-12">
         <div className="mb-8">

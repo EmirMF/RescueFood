@@ -23,7 +23,7 @@ const navItems: Array<{
   label: string;
   roles?: UserRole[];
 }> = [
-  { href: "/", label: "Marketplace", key: "marketplace" },
+  { href: "/marketplace", label: "Marketplace", key: "marketplace" },
   { href: "/impact", label: "Impact", key: "impact" },
   { href: "/merchant", label: "Merchant", key: "merchant", roles: ["merchant", "admin"] },
   { href: "/admin/verification", label: "Admin", key: "admin", roles: ["admin"] },
@@ -65,7 +65,7 @@ export function AppHeader({
   return (
     <header className="sticky top-0 z-50 border-b border-rf-outline-variant/30 bg-rf-surface/80 shadow-sm backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between gap-4 px-5 py-4 md:px-16">
-        <Link href="/" className="rf-focus-ring flex min-w-0 items-center gap-2 rounded-rf-control font-heading text-[32px] font-extrabold leading-10 text-rf-primary">
+        <Link href="/marketplace" className="rf-focus-ring flex min-w-0 items-center gap-2 rounded-rf-control font-heading text-[32px] font-extrabold leading-10 text-rf-primary">
           <span
             className="material-symbols-outlined text-4xl"
             style={{ fontVariationSettings: "'FILL' 1" }}

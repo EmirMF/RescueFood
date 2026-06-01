@@ -26,7 +26,7 @@ function getRedirectPath(role: UserRole) {
     return "/admin/verification";
   }
 
-  return "/";
+  return "/marketplace";
 }
 
 export function LoginForm() {

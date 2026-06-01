@@ -64,13 +64,13 @@ export default async function ListingDetail({
     <main className="min-h-screen bg-rf-background text-rf-text-onyx">
       <AppHeader
         active="marketplace"
-        actions={[{ href: "/", label: "Kembali" }]}
+        actions={[{ href: "/marketplace", label: "Kembali" }]}
         showSession
       />
 
       <div className="mx-auto w-full max-w-[1280px] px-5 py-8 md:px-16 md:py-12">
         <div className="mb-8">
-          <Link className="group flex items-center gap-2 text-rf-text-muted transition-colors hover:text-rf-primary" href="/">
+          <Link className="group flex items-center gap-2 text-rf-text-muted transition-colors hover:text-rf-primary" href="/marketplace">
             <span className="material-symbols-outlined transition-transform group-hover:-translate-x-1">
               arrow_back
             </span>
