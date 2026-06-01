@@ -21,6 +21,11 @@ export const metadata: Metadata = {
   title: "RescueFood",
   description:
     "Platform distribusi surplus makanan untuk merchant, customer, dan organisasi sosial.",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

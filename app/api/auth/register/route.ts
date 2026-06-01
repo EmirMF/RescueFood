@@ -40,8 +40,8 @@ export async function POST(request: Request) {
 
   const role = String(body.role).toUpperCase();
 
-  if (!["CUSTOMER", "MERCHANT", "CHARITY"].includes(role)) {
-    return fail("role must be CUSTOMER, MERCHANT, or CHARITY");
+  if (!["CUSTOMER", "MERCHANT"].includes(role)) {
+    return fail("role must be CUSTOMER or MERCHANT");
   }
 
   // Check if email already exists
@@ -54,12 +54,32 @@ export async function POST(request: Request) {
   }
 
   const passwordHash = await bcrypt.hash(body.password, 12); // Increased from 10 to 12
+  const businessName = String(body.businessName ?? body.name).trim();
+  const merchantAddress = String(body.address ?? "Alamat belum diatur").trim();
+  const merchantPhone = String(body.phone ?? "-").trim();
+
+  if (role === "MERCHANT" && businessName.length < 2) {
+    return fail("businessName is required for merchant registration");
+  }
+
   const user = await prisma.user.create({
     data: {
       name: body.name,
       email: body.email,
       passwordHash,
-      role: role as "CUSTOMER" | "MERCHANT" | "CHARITY",
+      role: role as "CUSTOMER" | "MERCHANT",
+      ...(role === "MERCHANT"
+        ? {
+            merchant: {
+              create: {
+                businessName,
+                address: merchantAddress || "Alamat belum diatur",
+                phone: merchantPhone || "-",
+                verificationStatus: "PENDING",
+              },
+            },
+          }
+        : {}),
     },
     select: {
       id: true,
@@ -68,6 +88,13 @@ export async function POST(request: Request) {
       role: true,
       status: true,
       createdAt: true,
+      merchant: {
+        select: {
+          id: true,
+          businessName: true,
+          verificationStatus: true,
+        },
+      },
     },
   });
 

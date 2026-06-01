@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { secureFetch } from "@/lib/secure-fetch";
 
@@ -45,11 +45,32 @@ interface PaymentCheckoutProps {
 
 export function PaymentCheckout({ order, midtransConfig }: PaymentCheckoutProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const subtotal = Math.max(0, order.totalPrice - order.adminFee);
   const [notice, setNotice] = useState("");
   const [snapLoaded, setSnapLoaded] = useState(midtransConfig.demoMode);
+
+  const goToOrderDetail = useCallback((query = "payment=success") => {
+    router.replace(`/orders/${order.id}?${query}`);
+    router.refresh();
+  }, [order.id, router]);
+
+  const syncPaymentStatus = useCallback(async () => {
+    const response = await secureFetch(`/api/orders/${order.id}/payment/sync`, {
+      method: "POST",
+    });
+    const result = await response.json();
+
+    if (!response.ok || !result.data) {
+      throw new Error(result.error ?? "Failed to sync payment status");
+    }
+
+    return result.data as {
+      paymentStatus: "PENDING" | "PAID" | "FAILED" | "EXPIRED";
+    };
+  }, [order.id]);
 
   // Load Midtrans Snap script (skip in demo mode)
   useEffect(() => {
@@ -68,6 +89,65 @@ export function PaymentCheckout({ order, midtransConfig }: PaymentCheckoutProps)
       document.body.removeChild(script);
     };
   }, [midtransConfig]);
+
+  useEffect(() => {
+    if (order.paymentStatus === "PAID") {
+      goToOrderDetail("payment=success");
+      return;
+    }
+
+    if (!order.midtransToken) {
+      return;
+    }
+
+    const gatewayStatus = searchParams.get("gateway");
+    let cancelled = false;
+
+    async function syncAndRedirectWhenPaid() {
+      try {
+        const synced = await syncPaymentStatus();
+
+        if (cancelled) {
+          return;
+        }
+
+        if (synced.paymentStatus === "PAID") {
+          goToOrderDetail("payment=success");
+          return;
+        }
+
+        if (gatewayStatus === "finish") {
+          setNotice(
+            "Pembayaran sedang diverifikasi. Halaman ini akan berpindah otomatis setelah status sukses.",
+          );
+        }
+      } catch {
+        if (gatewayStatus === "finish") {
+          setNotice(
+            "Pembayaran diterima gateway, tapi status server belum bisa diverifikasi. Coba beberapa detik lagi.",
+          );
+        }
+      }
+    }
+
+    syncAndRedirectWhenPaid();
+    const interval = window.setInterval(syncAndRedirectWhenPaid, 3000);
+    const timeout = window.setTimeout(() => {
+      window.clearInterval(interval);
+    }, gatewayStatus === "finish" ? 30000 : 12000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      window.clearTimeout(timeout);
+    };
+  }, [
+    goToOrderDetail,
+    order.midtransToken,
+    order.paymentStatus,
+    searchParams,
+    syncPaymentStatus,
+  ]);
 
   async function handlePayment() {
     setLoading(true);
@@ -108,7 +188,7 @@ export function PaymentCheckout({ order, midtransConfig }: PaymentCheckoutProps)
         if (confirmed) {
           try {
             await syncPaymentStatus();
-            router.push(`/orders/${order.id}?payment=success&demo=true`);
+            goToOrderDetail("payment=success&demo=true");
           } catch {
             setError("Failed to update order status");
             setLoading(false);
@@ -130,8 +210,7 @@ export function PaymentCheckout({ order, midtransConfig }: PaymentCheckoutProps)
               const synced = await syncPaymentStatus();
 
               if (synced.paymentStatus === "PAID") {
-                router.refresh();
-                router.push(`/orders/${order.id}?payment=success`);
+                goToOrderDetail("payment=success");
                 return;
               }
 
@@ -139,7 +218,18 @@ export function PaymentCheckout({ order, midtransConfig }: PaymentCheckoutProps)
                 "Pembayaran berhasil di gateway, tapi status server masih diproses. Coba cek status lagi dalam beberapa detik.",
               );
               setLoading(false);
-              router.refresh();
+              setTimeout(async () => {
+                try {
+                  const retry = await syncPaymentStatus();
+                  if (retry.paymentStatus === "PAID") {
+                    goToOrderDetail("payment=success");
+                  } else {
+                    router.refresh();
+                  }
+                } catch {
+                  router.refresh();
+                }
+              }, 2500);
             } catch (syncError) {
               console.error("Payment sync error:", syncError);
               setError(
@@ -184,21 +274,6 @@ export function PaymentCheckout({ order, midtransConfig }: PaymentCheckoutProps)
       setError("Failed to process payment");
       setLoading(false);
     }
-  }
-
-  async function syncPaymentStatus() {
-    const response = await secureFetch(`/api/orders/${order.id}/payment/sync`, {
-      method: "POST",
-    });
-    const result = await response.json();
-
-    if (!response.ok || !result.data) {
-      throw new Error(result.error ?? "Failed to sync payment status");
-    }
-
-    return result.data as {
-      paymentStatus: "PENDING" | "PAID" | "FAILED" | "EXPIRED";
-    };
   }
 
   return (

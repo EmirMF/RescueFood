@@ -5,12 +5,11 @@ import { useState } from "react";
 import { notifySessionChanged } from "@/components/role-switcher";
 import type { UserRole } from "@/lib/types";
 
-type RegisterRole = "CUSTOMER" | "MERCHANT" | "CHARITY";
+type RegisterRole = "CUSTOMER" | "MERCHANT";
 
 function toUserRole(role: string): UserRole {
   if (role === "MERCHANT") return "merchant";
   if (role === "ADMIN") return "admin";
-  if (role === "CHARITY") return "charity";
   return "customer";
 }
 
@@ -55,7 +54,6 @@ function getPasswordStrength(pwd: string) {
 const roleOptions: { value: RegisterRole; label: string; icon: string; desc: string }[] = [
   { value: "CUSTOMER", label: "Customer", icon: "person", desc: "Beli makanan surplus" },
   { value: "MERCHANT", label: "Merchant", icon: "storefront", desc: "Jual makanan surplus" },
-  { value: "CHARITY", label: "Charity", icon: "volunteer_activism", desc: "Terima donasi" },
 ];
 
 export function RegisterForm() {
@@ -64,6 +62,7 @@ export function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [businessName, setBusinessName] = useState("");
   const [role, setRole] = useState<RegisterRole>("CUSTOMER");
   const [errors, setErrors] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -82,6 +81,9 @@ export function RegisterForm() {
     const validationErrors: string[] = [];
     if (!name.trim()) validationErrors.push("Nama lengkap wajib diisi.");
     if (!email.trim()) validationErrors.push("Email wajib diisi.");
+    if (role === "MERCHANT" && businessName.trim().length < 2) {
+      validationErrors.push("Nama toko minimal 2 karakter.");
+    }
 
     const pwdIssues = validatePasswordClient(password);
     if (pwdIssues.length > 0) {
@@ -102,7 +104,13 @@ export function RegisterForm() {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), email: email.trim(), password, role }),
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          password,
+          role,
+          ...(role === "MERCHANT" ? { businessName: businessName.trim() } : {}),
+        }),
       });
       const result = await response.json();
 
@@ -142,7 +150,7 @@ export function RegisterForm() {
         <label className="block text-sm font-semibold text-rf-text-onyx">
           Saya adalah...
         </label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {roleOptions.map((opt) => (
             <label key={opt.value} className="cursor-pointer">
               <input
@@ -187,6 +195,28 @@ export function RegisterForm() {
           />
         </div>
       </label>
+
+      {role === "MERCHANT" && (
+        <label className="block">
+          <span className="sr-only">Nama Toko</span>
+          <div className="relative">
+            <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-rf-text-muted">
+              storefront
+            </span>
+            <input
+              type="text"
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value)}
+              placeholder="Nama Toko / Brand Merchant"
+              autoComplete="organization"
+              className="rf-focus-ring w-full rounded-xl border border-rf-outline-variant bg-rf-surface py-3 pl-10 pr-4 text-base text-rf-text-onyx outline-none placeholder:text-rf-text-muted/60 focus:border-rf-primary focus:ring-2 focus:ring-rf-primary/20"
+            />
+          </div>
+          <p className="mt-1 text-xs font-semibold text-rf-text-muted">
+            Akun merchant baru akan masuk status pending sampai diverifikasi admin.
+          </p>
+        </label>
+      )}
 
       {/* Email */}
       <label className="block">
@@ -287,7 +317,7 @@ export function RegisterForm() {
         <span className="sr-only">Konfirmasi Password</span>
         <div className="relative">
           <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-rf-text-muted">
-            lock_check
+            lock
           </span>
           <input
             type={showConfirmPassword ? "text" : "password"}
@@ -295,7 +325,7 @@ export function RegisterForm() {
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="Konfirmasi Password"
             autoComplete="new-password"
-            className={`rf-focus-ring w-full rounded-xl border py-3 pl-10 pr-10 text-base text-rf-text-onyx outline-none placeholder:text-rf-text-muted/60 focus:ring-2 transition-colors ${
+            className={`rf-focus-ring w-full rounded-xl border py-3 pl-10 pr-16 text-base text-rf-text-onyx outline-none placeholder:text-rf-text-muted/60 focus:ring-2 transition-colors ${
               confirmPassword && !isConfirmValid
                 ? "border-rf-error bg-rf-error-container/10 focus:border-rf-error focus:ring-rf-error/20"
                 : isConfirmValid
@@ -306,7 +336,8 @@ export function RegisterForm() {
           <button
             type="button"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-rf-text-muted hover:text-rf-primary transition-colors"
+            className="absolute right-3 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-rf-text-muted transition-colors hover:bg-rf-surface-container-low hover:text-rf-primary"
+            aria-label={showConfirmPassword ? "Sembunyikan password" : "Tampilkan password"}
           >
             <span className="material-symbols-outlined text-xl">
               {showConfirmPassword ? "visibility_off" : "visibility"}
@@ -314,7 +345,7 @@ export function RegisterForm() {
           </button>
           {confirmPassword && (
             <span
-              className={`material-symbols-outlined absolute right-10 top-1/2 -translate-y-1/2 text-xl ${
+              className={`material-symbols-outlined pointer-events-none absolute right-12 top-1/2 -translate-y-1/2 text-xl ${
                 isConfirmValid ? "text-emerald-500" : "text-rf-error"
               }`}
               style={{ fontVariationSettings: "'FILL' 1" }}

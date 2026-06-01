@@ -52,6 +52,29 @@ export async function POST(request: Request) {
     return fail("Akun Anda telah ditangguhkan. Hubungi admin untuk informasi lebih lanjut.", 403);
   }
 
+  if (user.role === "MERCHANT") {
+    const merchant = await prisma.merchant.findUnique({
+      where: {
+        userId: user.id,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!merchant) {
+      await prisma.merchant.create({
+        data: {
+          userId: user.id,
+          businessName: user.name,
+          address: "Alamat belum diatur",
+          phone: "-",
+          verificationStatus: "PENDING",
+        },
+      });
+    }
+  }
+
   await createSession(user.id);
 
   const response = ok({

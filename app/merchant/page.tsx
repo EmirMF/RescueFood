@@ -11,12 +11,14 @@ export const dynamic = "force-dynamic";
 export default async function MerchantDashboardPage() {
   const currentUser = await requireRole("MERCHANT");
 
-  const dbMerchant = await prisma.merchant.findFirst({
-    where: currentUser?.merchantId
-      ? {
-          id: currentUser.merchantId,
-        }
-      : undefined,
+  if (!currentUser.merchantId) {
+    notFound();
+  }
+
+  const dbMerchant = await prisma.merchant.findUnique({
+    where: {
+      id: currentUser.merchantId,
+    },
     include: {
       listings: {
         include: {
@@ -38,9 +40,6 @@ export default async function MerchantDashboardPage() {
           createdAt: "desc",
         },
       },
-    },
-    orderBy: {
-      createdAt: "asc",
     },
   });
   const merchant = dbMerchant

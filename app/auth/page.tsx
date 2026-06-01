@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { LoginForm } from "@/components/login-form";
-import { RegisterForm } from "@/components/register-form";
 import { AuthTabs } from "@/components/auth-tabs";
 
 const authImage =

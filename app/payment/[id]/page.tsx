@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
 import { AppHeader } from "@/components/app-header";
 import { PaymentCheckout } from "@/components/payment-checkout";
 import { prisma } from "@/lib/prisma";
@@ -41,22 +42,24 @@ export default async function PaymentPage({
   return (
     <main className="min-h-screen bg-surface">
       <AppHeader showSession />
-      <PaymentCheckout
-        order={{
-          id: order.id,
-          totalPrice: order.totalPrice,
-          adminFee: order.adminFee,
-          quantity: order.quantity,
-          listing: {
-            title: order.listing.title,
-            imageUrl: order.listing.imageUrl,
-            merchantName: order.listing.merchant.businessName,
-          },
-          paymentStatus: order.paymentStatus,
-          midtransToken: order.midtransToken,
-        }}
-        midtransConfig={midtransConfig}
-      />
+      <Suspense fallback={null}>
+        <PaymentCheckout
+          order={{
+            id: order.id,
+            totalPrice: order.totalPrice,
+            adminFee: order.adminFee,
+            quantity: order.quantity,
+            listing: {
+              title: order.listing.title,
+              imageUrl: order.listing.imageUrl,
+              merchantName: order.listing.merchant.businessName,
+            },
+            paymentStatus: order.paymentStatus,
+            midtransToken: order.midtransToken,
+          }}
+          midtransConfig={midtransConfig}
+        />
+      </Suspense>
     </main>
   );
 }

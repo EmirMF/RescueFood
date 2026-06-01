@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { roleLabels } from "@/lib/session";
 import { notifySessionChanged } from "@/components/role-switcher";
 import type { FoodListing, Merchant, RescueOrder, UserRole } from "@/lib/types";
 import { MerchantLocationPicker } from "@/components/merchant-location-picker";
@@ -98,29 +97,6 @@ function ImpactLine({
   );
 }
 
-function ReadOnlyField({
-  className = "",
-  label,
-  value,
-}: {
-  className?: string;
-  label: string;
-  value: string;
-}) {
-  return (
-    <label className={`block ${className}`}>
-      <span className="mb-2 block text-sm font-extrabold text-rf-text-muted">
-        {label}
-      </span>
-      <input
-        readOnly
-        value={value}
-        className="rf-focus-ring w-full rounded-xl border border-rf-outline-variant bg-rf-surface px-4 py-3 text-base font-semibold text-rf-text-onyx outline-none transition focus:border-rf-primary focus:ring-2 focus:ring-rf-primary/20"
-      />
-    </label>
-  );
-}
-
 function EditableField({
   label,
   value,
@@ -189,20 +165,6 @@ function EmptyState({
       </Link>
     </div>
   );
-}
-
-function splitName(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-
-  if (parts.length === 0) {
-    return ["Guest", "Customer"];
-  }
-
-  if (parts.length === 1) {
-    return [parts[0], ""];
-  }
-
-  return [parts[0], parts.slice(1).join(" ")];
 }
 
 function formatDate(value: string) {
@@ -480,6 +442,7 @@ function ProfilePanel({
   // ── Profile fields ──────────────────────────────────────────────────────
   const [name, setName] = useState(profile.name);
   const [email, setEmail] = useState(profile.email);
+  const [businessName, setBusinessName] = useState(merchant?.name ?? "");
   const [profileStatus, setProfileStatus] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
@@ -535,8 +498,15 @@ function ProfilePanel({
     const trimmedName = name.trim();
     const trimmedEmail = email.trim().toLowerCase();
 
+    const trimmedBusinessName = businessName.trim();
+
     if (trimmedName.length < 2) {
       setProfileError("Nama minimal 2 karakter.");
+      setProfileStatus("error");
+      return;
+    }
+    if (role === "merchant" && trimmedBusinessName.length < 2) {
+      setProfileError("Nama toko minimal 2 karakter.");
       setProfileStatus("error");
       return;
     }
@@ -550,7 +520,13 @@ function ProfilePanel({
       const res = await secureFetch("/api/account/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: trimmedName, email: trimmedEmail }),
+        body: JSON.stringify({
+          name: trimmedName,
+          email: trimmedEmail,
+          ...(role === "merchant"
+            ? { businessName: trimmedBusinessName }
+            : {}),
+        }),
       });
       const result = await res.json();
 
@@ -562,6 +538,9 @@ function ProfilePanel({
 
       setName(result.data.name);
       setEmail(result.data.email);
+      if (result.data.merchant?.businessName) {
+        setBusinessName(result.data.merchant.businessName);
+      }
       setProfileStatus("saved");
       setIsEditingProfile(false);
       setTimeout(() => setProfileStatus("idle"), 3000);
@@ -574,6 +553,7 @@ function ProfilePanel({
   function cancelProfileEdit() {
     setName(profile.name);
     setEmail(profile.email);
+    setBusinessName(merchant?.name ?? "");
     setProfileError("");
     setProfileStatus("idle");
     setIsEditingProfile(false);
@@ -626,18 +606,6 @@ function ProfilePanel({
     setPwdError("");
     setPwdStatus("idle");
     setIsEditingPwd(false);
-  }
-
-  function resetMerchantLocation() {
-    setMerchantAddress(merchant?.location ?? "Bandung");
-    setMerchantLatitude(
-      merchant?.latitude?.toString() ?? bandungPinpoint.latitude,
-    );
-    setMerchantLongitude(
-      merchant?.longitude?.toString() ?? bandungPinpoint.longitude,
-    );
-    setLocationSearch(merchant?.location ?? "Bandung");
-    setLocationStatus("idle");
   }
 
   async function searchMerchantLocation() {
@@ -760,6 +728,34 @@ function ProfilePanel({
               )}
             </label>
           </div>
+
+          {role === "merchant" && (
+            <div className="md:col-span-2">
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-extrabold text-rf-text-muted">
+                  Nama Toko
+                </span>
+                {isEditingProfile ? (
+                  <div className="relative">
+                    <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-rf-text-muted">
+                      storefront
+                    </span>
+                    <input
+                      type="text"
+                      value={businessName}
+                      onChange={e => setBusinessName(e.target.value)}
+                      className="rf-focus-ring w-full rounded-xl border border-rf-primary bg-rf-surface py-3 pl-10 pr-4 text-base font-semibold text-rf-text-onyx outline-none focus:ring-2 focus:ring-rf-primary/20"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 rounded-xl border border-rf-outline-variant bg-rf-surface px-4 py-3">
+                    <span className="material-symbols-outlined text-rf-text-muted">storefront</span>
+                    <span className="text-base font-semibold text-rf-text-onyx">{businessName || "-"}</span>
+                  </div>
+                )}
+              </label>
+            </div>
+          )}
 
           {/* Role — always readonly */}
           <div className="md:col-span-2">
@@ -1105,6 +1101,7 @@ function ProfilePanel({
       )}
     </div>
   );
+}
 
 function OrderCard({
   listing,
@@ -1421,5 +1418,4 @@ function DeleteAccountSection({
       )}
     </div>
   );
-}
 }

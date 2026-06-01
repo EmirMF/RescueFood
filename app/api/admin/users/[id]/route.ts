@@ -50,7 +50,7 @@ export async function PATCH(
 
   const newStatus = action === "suspend" ? "SUSPENDED" : "ACTIVE";
 
-  const updatedUser = await prisma.$transaction(async (tx: typeof prisma) => {
+  const updatedUser = await prisma.$transaction(async (tx) => {
     const user = await tx.user.update({
       where: { id },
       data: { status: newStatus },
