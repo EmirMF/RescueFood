@@ -13,7 +13,7 @@ type HeaderAction = {
 
 type AppHeaderProps = {
   actions?: HeaderAction[];
-  active?: "marketplace" | "impact" | "merchant" | "admin" | "wishlist" | "notifications";
+  active?: "marketplace" | "impact" | "merchant" | "admin" | "admin-dashboard" | "wishlist" | "notifications";
   showSession?: boolean;
 };
 
@@ -26,7 +26,8 @@ const navItems: Array<{
   { href: "/", label: "Marketplace", key: "marketplace" },
   { href: "/impact", label: "Impact", key: "impact" },
   { href: "/merchant", label: "Merchant", key: "merchant", roles: ["merchant", "admin"] },
-  { href: "/admin/verification", label: "Admin", key: "admin", roles: ["admin"] },
+  { href: "/admin/dashboard", label: "Dashboard", key: "admin-dashboard", roles: ["admin"] },
+  { href: "/admin/verification", label: "Verifikasi", key: "admin", roles: ["admin"] },
 ];
 
 export function AppHeader({
@@ -65,7 +66,7 @@ export function AppHeader({
   return (
     <header className="sticky top-0 z-50 border-b border-rf-outline-variant/30 bg-rf-surface/80 shadow-sm backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between gap-4 px-5 py-4 md:px-16">
-        <Link href="/" className="rf-focus-ring flex min-w-0 items-center gap-2 rounded-rf-control font-heading text-[32px] font-extrabold leading-10 text-rf-primary">
+        <Link href="/marketplace" className="rf-focus-ring flex min-w-0 items-center gap-2 rounded-rf-control font-heading text-[32px] font-extrabold leading-10 text-rf-primary">
           <span
             className="material-symbols-outlined text-4xl"
             style={{ fontVariationSettings: "'FILL' 1" }}
@@ -75,7 +76,7 @@ export function AppHeader({
           <span className="truncate">RescueFood</span>
         </Link>
 
-        <nav className="hidden items-center gap-8 font-heading text-xl font-semibold leading-7 md:flex">
+        <nav className="hidden items-center gap-6 font-heading text-base font-semibold leading-7 md:flex">
           {visibleNavItems.map((item) => (
             <Link
               key={item.key}

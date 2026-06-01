@@ -65,7 +65,7 @@ export function HomeContent({
     role === "merchant"
       ? "/merchant"
       : role === "admin"
-          ? "/admin/verification"
+          ? "/admin/dashboard"
           : "/profile";
 
   return (

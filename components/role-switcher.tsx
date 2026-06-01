@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { roleLabels } from "@/lib/session";
 import type { UserRole } from "@/lib/types";
 
@@ -12,18 +13,10 @@ type SessionUser = {
 };
 
 function toUserRole(role?: string): UserRole | null {
-  if (role === "MERCHANT") {
-    return "merchant";
-  }
-
-  if (role === "ADMIN") {
-    return "admin";
-  }
-
-  if (role === "CUSTOMER") {
-    return "customer";
-  }
-
+  if (role === "MERCHANT") return "merchant";
+  if (role === "ADMIN") return "admin";
+  if (role === "CUSTOMER") return "customer";
+  if (role === "CHARITY") return "charity";
   return null;
 }
 
@@ -41,6 +34,7 @@ export function useSessionRole() {
       try {
         const response = await fetch("/api/auth/me", {
           signal: controller.signal,
+          cache: "no-store",
         });
         const result = await response.json();
         setRole(toUserRole((result.data as SessionUser | null)?.role));
@@ -63,8 +57,10 @@ export function useSessionRole() {
 
 export function RoleSwitcher({ compact = false }: { compact?: boolean }) {
   const role = useSessionRole();
+  const router = useRouter();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const label = role ? roleLabels[role] : "Masuk";
 
   useEffect(() => {
@@ -74,6 +70,7 @@ export function RoleSwitcher({ compact = false }: { compact?: boolean }) {
       try {
         const response = await fetch("/api/auth/me", {
           signal: controller.signal,
+          cache: "no-store",
         });
         const result = await response.json();
         setUser(result.data ?? null);
@@ -92,12 +89,18 @@ export function RoleSwitcher({ compact = false }: { compact?: boolean }) {
   }, []);
 
   async function logout() {
-    await fetch("/api/auth/logout", {
-      method: "POST",
-    });
+    setIsLoggingOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // Cookie dihapus server-side — tetap lanjutkan logout
+    }
     setIsOpen(false);
     setUser(null);
     notifySessionChanged();
+    // Paksa Next.js re-fetch semua server components di halaman aktif
+    router.refresh();
+    setIsLoggingOut(false);
   }
 
   if (compact) {
@@ -116,48 +119,60 @@ export function RoleSwitcher({ compact = false }: { compact?: boolean }) {
       <div className="relative">
         <button
           type="button"
-          onClick={() => setIsOpen((current) => !current)}
+          onClick={() => setIsOpen((c) => !c)}
           className="rf-focus-ring inline-flex h-10 items-center rounded-rf-control border border-rf-outline-variant bg-rf-surface-base px-3 text-sm font-extrabold text-rf-primary"
         >
           {label}
         </button>
+
         {isOpen && (
-          <div className="absolute right-0 top-12 z-50 w-64 rounded-rf-card border border-rf-outline-variant bg-rf-surface-base p-3 text-left shadow-[0_18px_50px_rgba(13,13,18,0.14)]">
-            <p className="text-sm font-black text-rf-text-onyx">
-              {user?.name ?? label}
-            </p>
-            <p className="mt-1 truncate text-xs font-semibold text-rf-text-muted">
-              {user?.email}
-            </p>
-            <div className="mt-3 grid gap-2">
-              {(role === "merchant" || role === "admin") && (
+          <>
+            {/* Backdrop — tutup dropdown saat klik di luar */}
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setIsOpen(false)}
+            />
+            <div className="absolute right-0 top-12 z-50 w-64 rounded-rf-card border border-rf-outline-variant bg-rf-surface-base p-3 text-left shadow-[0_18px_50px_rgba(13,13,18,0.14)]">
+              <p className="text-sm font-black text-rf-text-onyx">
+                {user?.name ?? label}
+              </p>
+              <p className="mt-1 truncate text-xs font-semibold text-rf-text-muted">
+                {user?.email}
+              </p>
+              <div className="mt-3 grid gap-2">
+                {(role === "merchant" || role === "admin") && (
+                  <Link
+                    href={role === "merchant" ? "/merchant" : "/admin/dashboard"}
+                    className="rf-focus-ring rounded-rf-control bg-rf-surface-container-low px-3 py-2 text-sm font-extrabold text-rf-primary"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Dashboard
+                  </Link>
+                )}
                 <Link
-                  href={role === "merchant" ? "/merchant" : "/admin/verification"}
-                  className="rf-focus-ring rounded-rf-control bg-rf-surface-container-low px-3 py-2 text-sm font-extrabold text-rf-primary"
+                  href="/profile"
+                  className="rf-focus-ring rounded-rf-control border border-rf-outline-variant px-3 py-2 text-sm font-extrabold text-rf-primary"
+                  onClick={() => setIsOpen(false)}
                 >
-                  Dashboard
+                  Profil
                 </Link>
-              )}
-              <Link
-                href="/profile"
-                className="rf-focus-ring rounded-rf-control border border-rf-outline-variant px-3 py-2 text-sm font-extrabold text-rf-primary"
-              >
-                Profil
-              </Link>
-              <button
-                type="button"
-                onClick={logout}
-                className="rf-focus-ring rounded-rf-control border border-rf-outline-variant px-3 py-2 text-left text-sm font-extrabold text-rf-primary"
-              >
-                Logout
-              </button>
+                <button
+                  type="button"
+                  onClick={logout}
+                  disabled={isLoggingOut}
+                  className="rf-focus-ring rounded-rf-control border border-rf-outline-variant px-3 py-2 text-left text-sm font-extrabold text-rf-primary disabled:opacity-60"
+                >
+                  {isLoggingOut ? "Keluar..." : "Logout"}
+                </button>
+              </div>
             </div>
-          </div>
+          </>
         )}
       </div>
     );
   }
 
+  // Non-compact (profile page sidebar)
   return (
     <div className="grid gap-3">
       <div className="rounded-rf-control bg-rf-surface-container-low p-4">
@@ -176,9 +191,10 @@ export function RoleSwitcher({ compact = false }: { compact?: boolean }) {
         <button
           type="button"
           onClick={logout}
-          className="rf-focus-ring rounded-rf-control border border-rf-outline-variant px-4 py-3 text-sm font-extrabold text-rf-primary transition hover:border-rf-primary"
+          disabled={isLoggingOut}
+          className="rf-focus-ring rounded-rf-control border border-rf-outline-variant px-4 py-3 text-sm font-extrabold text-rf-primary transition hover:border-rf-primary disabled:opacity-60"
         >
-          Logout session
+          {isLoggingOut ? "Keluar..." : "Logout session"}
         </button>
       )}
     </div>

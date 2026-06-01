@@ -23,7 +23,7 @@ function toClientRole(role?: string): UserRole {
 
 export default async function ProfilePage() {
   const currentUser = await getCurrentUser();
-  const [orders, merchant] = await Promise.all([
+  const [orders, merchant, userRecord] = await Promise.all([
     currentUser
       ? prisma.order.findMany({
           where:
@@ -33,43 +33,34 @@ export default async function ProfilePage() {
                 ? { merchantId: currentUser.merchantId }
                 : { id: "__none__" },
           include: {
-            customer: {
-              select: {
-                name: true,
-              },
-            },
-            listing: {
-              include: {
-                merchant: true,
-              },
-            },
+            customer: { select: { name: true } },
+            listing: { include: { merchant: true } },
           },
-          orderBy: {
-            createdAt: "desc",
-          },
+          orderBy: { createdAt: "desc" },
         })
       : Promise.resolve([]),
     currentUser?.merchantId
       ? prisma.merchant.findUnique({
-          where: {
-            id: currentUser.merchantId,
-          },
+          where: { id: currentUser.merchantId },
           include: {
             listings: {
-              include: {
-                merchant: true,
-              },
-              orderBy: {
-                createdAt: "desc",
-              },
+              include: { merchant: true },
+              orderBy: { createdAt: "desc" },
             },
           },
+        })
+      : Promise.resolve(null),
+    // Fetch passwordHash to know if user registered via OAuth
+    currentUser
+      ? prisma.user.findUnique({
+          where: { id: currentUser.id },
+          select: { passwordHash: true },
         })
       : Promise.resolve(null),
   ]);
   const listingMap = new Map(
     [
-      ...orders.map((order) => order.listing),
+      ...orders.map((order: typeof orders[number]) => order.listing),
       ...(merchant?.listings ?? []),
     ].map((listing) => [listing.id, mapApiListingToFoodListing(listing)]),
   );
@@ -122,6 +113,7 @@ export default async function ProfilePage() {
             email: currentUser?.email ?? "Belum login",
             name: currentUser?.name ?? "Guest Customer",
           }}
+          hasPassword={!!userRecord?.passwordHash}
           role={toClientRole(currentUser?.role)}
         />
       </section>

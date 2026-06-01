@@ -6,33 +6,23 @@ import { notifySessionChanged } from "@/components/role-switcher";
 import type { UserRole } from "@/lib/types";
 
 function toUserRole(role: string): UserRole {
-  if (role === "MERCHANT") {
-    return "merchant";
-  }
-
-  if (role === "ADMIN") {
-    return "admin";
-  }
-
+  if (role === "MERCHANT") return "merchant";
+  if (role === "ADMIN") return "admin";
+  if (role === "CHARITY") return "charity";
   return "customer";
 }
 
 function getRedirectPath(role: UserRole) {
-  if (role === "merchant") {
-    return "/merchant";
-  }
-
-  if (role === "admin") {
-    return "/admin/verification";
-  }
-
-  return "/";
+  if (role === "merchant") return "/merchant";
+  if (role === "admin") return "/admin/dashboard";
+  return "/marketplace";
 }
 
 export function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -43,13 +33,8 @@ export function LoginForm() {
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
       const result = await response.json();
 
@@ -83,13 +68,15 @@ export function LoginForm() {
           <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-rf-text-muted">
             mail
           </span>
-        <input
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder="Email Address"
-          className="rf-focus-ring w-full rounded-xl border border-rf-outline-variant bg-rf-surface py-3 pl-10 pr-4 text-base text-rf-text-onyx outline-none placeholder:text-rf-text-muted/60 focus:border-rf-primary focus:ring-2 focus:ring-rf-primary"
-        />
+          <input
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="Email Address"
+            autoComplete="email"
+            required
+            className="rf-focus-ring w-full rounded-xl border border-rf-outline-variant bg-rf-surface py-3 pl-10 pr-4 text-base text-rf-text-onyx outline-none placeholder:text-rf-text-muted/60 focus:border-rf-primary focus:ring-2 focus:ring-rf-primary/20"
+          />
         </span>
       </label>
       <label className="block">
@@ -98,13 +85,24 @@ export function LoginForm() {
           <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-rf-text-muted">
             lock
           </span>
-        <input
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder="Password"
-          className="rf-focus-ring w-full rounded-xl border border-rf-outline-variant bg-rf-surface py-3 pl-10 pr-4 text-base text-rf-text-onyx outline-none placeholder:text-rf-text-muted/60 focus:border-rf-primary focus:ring-2 focus:ring-rf-primary"
-        />
+          <input
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="Password"
+            autoComplete="current-password"
+            required
+            className="rf-focus-ring w-full rounded-xl border border-rf-outline-variant bg-rf-surface py-3 pl-10 pr-10 text-base text-rf-text-onyx outline-none placeholder:text-rf-text-muted/60 focus:border-rf-primary focus:ring-2 focus:ring-rf-primary/20"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-rf-text-muted hover:text-rf-primary transition-colors"
+          >
+            <span className="material-symbols-outlined text-xl">
+              {showPassword ? "visibility_off" : "visibility"}
+            </span>
+          </button>
         </span>
       </label>
       <div className="flex items-center justify-between">
@@ -113,23 +111,28 @@ export function LoginForm() {
             className="rounded border-rf-outline-variant bg-rf-surface text-rf-primary focus:ring-rf-primary"
             type="checkbox"
           />
-          Remember me
+          Ingat saya
         </label>
         <a className="text-sm font-semibold text-rf-primary hover:underline" href="#">
-          Forgot password?
+          Lupa password?
         </a>
       </div>
       {error && (
-        <p className="rounded-rf-control bg-rf-error-container px-4 py-3 text-sm font-extrabold text-rf-error">
+        <p className="flex items-center gap-2 rounded-xl bg-rf-error-container px-4 py-3 text-sm font-semibold text-rf-error">
+          <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>error</span>
           {error}
         </p>
       )}
       <button
         type="submit"
         disabled={isSubmitting}
-        className="rf-focus-ring w-full rounded-full bg-rf-primary-container px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-rf-primary disabled:cursor-not-allowed disabled:bg-rf-outline-variant"
+        className="rf-focus-ring w-full rounded-full bg-rf-primary-container px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-rf-primary disabled:cursor-not-allowed disabled:bg-rf-outline-variant transition-all active:scale-[0.98]"
       >
-        {isSubmitting ? "Masuk..." : "Masuk"}
+        {isSubmitting ? (
+          <span className="flex items-center justify-center gap-2">
+            <span className="animate-spin">◌</span> Masuk...
+          </span>
+        ) : "Masuk"}
       </button>
     </form>
   );
