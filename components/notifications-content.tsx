@@ -151,7 +151,7 @@ export function NotificationsContent() {
               : "Notifikasi akan muncul di sini saat ada aktivitas baru."}
           </p>
           <Link
-            href="/"
+            href="/marketplace"
             className="rf-focus-ring mt-6 inline-flex items-center gap-2 rounded-full bg-rf-primary-container px-6 py-3 text-sm font-semibold text-white hover:bg-rf-primary-fixed hover:text-rf-text-onyx"
           >
             <span className="material-symbols-outlined">home</span>

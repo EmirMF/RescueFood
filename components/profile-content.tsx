@@ -215,6 +215,169 @@ function formatDate(value: string) {
 
 /* ─── Delete Account Section ─────────────────────────────────────────────── */
 
+
+function HistoryPanel({
+  listings,
+  orders,
+  role,
+}: {
+  listings: FoodListing[];
+  orders: RescueOrder[];
+  role: UserRole;
+}) {
+  const visibleOrders = useMemo(() => orders, [orders]);
+
+  if (visibleOrders.length === 0) {
+    return (
+      <EmptyState
+        actionHref={role === "merchant" ? "/merchant" : "/marketplace"}
+        actionLabel={role === "merchant" ? "Buka Dashboard" : "Go to Marketplace"}
+        icon="receipt_long"
+        title={role === "merchant" ? "Belum ada pickup" : "No Orders Yet"}
+        text={
+          role === "merchant"
+            ? "Order paid dari customer akan muncul di sini setelah listing mendapat transaksi."
+            : "Start rescuing surplus meals and your order history will appear here."
+        }
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {visibleOrders.map((order) => {
+        const listing = listings.find((item) => item.id === order.listingId);
+
+        return (
+          <OrderCard
+            key={order.id}
+            listing={listing}
+            order={order}
+            role={role}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function ReviewsPanel({
+  setActiveTab,
+}: {
+  setActiveTab: (tab: ProfileTab) => void;
+}) {
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchReviews = useCallback(async () => {
+    try {
+      const response = await secureFetch("/api/reviews");
+      const result = await response.json();
+
+      if (response.ok && result.data) {
+        setReviews(result.data);
+      }
+    } catch (error) {
+      console.error("Error fetching reviews:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(fetchReviews, 0);
+    return () => window.clearTimeout(timeout);
+  }, [fetchReviews]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[420px] items-center justify-center rounded-xl bg-rf-surface-base p-6 shadow-[0px_10px_30px_rgba(0,0,0,0.04)]">
+        <p className="text-rf-text-muted">Loading reviews...</p>
+      </div>
+    );
+  }
+
+  if (reviews.length === 0) {
+    return (
+      <div className="flex min-h-[420px] flex-col items-center justify-center rounded-xl bg-rf-surface-base p-6 py-16 text-center shadow-[0px_10px_30px_rgba(0,0,0,0.04)] md:p-8">
+        <div className="mb-6 flex size-24 items-center justify-center rounded-full bg-rf-tertiary-container/15 text-rf-tertiary">
+          <span
+            className="material-symbols-outlined text-[64px]"
+            style={{ fontVariationSettings: "'FILL' 1" }}
+          >
+            reviews
+          </span>
+        </div>
+        <h3 className="font-heading text-[32px] font-bold leading-10 tracking-[-0.01em] text-rf-text-onyx">
+          No Reviews Yet
+        </h3>
+        <p className="mb-8 mt-2 max-w-md text-base leading-6 tracking-[0.01em] text-rf-text-muted">
+          You have not left any reviews for your past rescues. Help the community
+          by sharing your experience after pickup is completed.
+        </p>
+        <button
+          type="button"
+          onClick={() => setActiveTab("orders")}
+          className="rf-focus-ring rounded-full bg-rf-primary-container px-6 py-2 text-sm font-extrabold text-white shadow-sm transition hover:bg-rf-primary"
+        >
+          Go to Past Orders
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {reviews.map((review) => (
+        <div
+          key={review.id}
+          className="rounded-xl bg-rf-surface-base p-6 shadow-[0px_10px_30px_rgba(0,0,0,0.04)]"
+        >
+          <div className="mb-4 flex items-start justify-between">
+            <div>
+              <h3 className="font-heading text-xl font-semibold leading-7 text-rf-text-onyx">
+                {review.order.listing.title}
+              </h3>
+              <p className="mt-1 text-sm text-rf-text-muted">
+                {review.order.listing.merchantName}
+              </p>
+            </div>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <span
+                  key={star}
+                  className="material-symbols-outlined text-[20px]"
+                  style={{
+                    fontVariationSettings: star <= review.rating ? "'FILL' 1" : "'FILL' 0",
+                    color: star <= review.rating ? "#F59E0B" : "#D1D5DB",
+                  }}
+                >
+                  star
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {review.comment && (
+            <p className="mb-3 text-base leading-6 text-rf-text-onyx">
+              {review.comment}
+            </p>
+          )}
+
+          <p className="text-xs text-rf-text-muted">
+            {new Date(review.createdAt).toLocaleDateString("id-ID", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
 export function ProfileContent({
   initialListings = [],
   initialMerchant,
@@ -942,167 +1105,6 @@ function ProfilePanel({
       )}
     </div>
   );
-
-function HistoryPanel({
-  listings,
-  orders,
-  role,
-}: {
-  listings: FoodListing[];
-  orders: RescueOrder[];
-  role: UserRole;
-}) {
-  const visibleOrders = useMemo(() => orders, [orders]);
-
-  if (visibleOrders.length === 0) {
-    return (
-      <EmptyState
-        actionHref={role === "merchant" ? "/merchant" : "/marketplace"}
-        actionLabel={role === "merchant" ? "Buka Dashboard" : "Go to Marketplace"}
-        icon="receipt_long"
-        title={role === "merchant" ? "Belum ada pickup" : "No Orders Yet"}
-        text={
-          role === "merchant"
-            ? "Order paid dari customer akan muncul di sini setelah listing mendapat transaksi."
-            : "Start rescuing surplus meals and your order history will appear here."
-        }
-      />
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {visibleOrders.map((order) => {
-        const listing = listings.find((item) => item.id === order.listingId);
-
-        return (
-          <OrderCard
-            key={order.id}
-            listing={listing}
-            order={order}
-            role={role}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-function ReviewsPanel({
-  setActiveTab,
-}: {
-  setActiveTab: (tab: ProfileTab) => void;
-}) {
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchReviews = useCallback(async () => {
-    try {
-      const response = await secureFetch("/api/reviews");
-      const result = await response.json();
-
-      if (response.ok && result.data) {
-        setReviews(result.data);
-      }
-    } catch (error) {
-      console.error("Error fetching reviews:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const timeout = window.setTimeout(fetchReviews, 0);
-    return () => window.clearTimeout(timeout);
-  }, [fetchReviews]);
-
-  if (loading) {
-    return (
-      <div className="flex min-h-[420px] items-center justify-center rounded-xl bg-rf-surface-base p-6 shadow-[0px_10px_30px_rgba(0,0,0,0.04)]">
-        <p className="text-rf-text-muted">Loading reviews...</p>
-      </div>
-    );
-  }
-
-  if (reviews.length === 0) {
-    return (
-      <div className="flex min-h-[420px] flex-col items-center justify-center rounded-xl bg-rf-surface-base p-6 py-16 text-center shadow-[0px_10px_30px_rgba(0,0,0,0.04)] md:p-8">
-        <div className="mb-6 flex size-24 items-center justify-center rounded-full bg-rf-tertiary-container/15 text-rf-tertiary">
-          <span
-            className="material-symbols-outlined text-[64px]"
-            style={{ fontVariationSettings: "'FILL' 1" }}
-          >
-            reviews
-          </span>
-        </div>
-        <h3 className="font-heading text-[32px] font-bold leading-10 tracking-[-0.01em] text-rf-text-onyx">
-          No Reviews Yet
-        </h3>
-        <p className="mb-8 mt-2 max-w-md text-base leading-6 tracking-[0.01em] text-rf-text-muted">
-          You have not left any reviews for your past rescues. Help the community
-          by sharing your experience after pickup is completed.
-        </p>
-        <button
-          type="button"
-          onClick={() => setActiveTab("orders")}
-          className="rf-focus-ring rounded-full bg-rf-primary-container px-6 py-2 text-sm font-extrabold text-white shadow-sm transition hover:bg-rf-primary"
-        >
-          Go to Past Orders
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {reviews.map((review) => (
-        <div
-          key={review.id}
-          className="rounded-xl bg-rf-surface-base p-6 shadow-[0px_10px_30px_rgba(0,0,0,0.04)]"
-        >
-          <div className="mb-4 flex items-start justify-between">
-            <div>
-              <h3 className="font-heading text-xl font-semibold leading-7 text-rf-text-onyx">
-                {review.order.listing.title}
-              </h3>
-              <p className="mt-1 text-sm text-rf-text-muted">
-                {review.order.listing.merchantName}
-              </p>
-            </div>
-            <div className="flex items-center gap-1">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <span
-                  key={star}
-                  className="material-symbols-outlined text-[20px]"
-                  style={{
-                    fontVariationSettings: star <= review.rating ? "'FILL' 1" : "'FILL' 0",
-                    color: star <= review.rating ? "#F59E0B" : "#D1D5DB",
-                  }}
-                >
-                  star
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {review.comment && (
-            <p className="mb-3 text-base leading-6 text-rf-text-onyx">
-              {review.comment}
-            </p>
-          )}
-
-          <p className="text-xs text-rf-text-muted">
-            {new Date(review.createdAt).toLocaleDateString("id-ID", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })}
-          </p>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function OrderCard({
   listing,

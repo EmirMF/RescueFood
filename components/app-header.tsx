@@ -23,7 +23,7 @@ const navItems: Array<{
   label: string;
   roles?: UserRole[];
 }> = [
-  { href: "/", label: "Marketplace", key: "marketplace" },
+  { href: "/marketplace", label: "Marketplace", key: "marketplace" },
   { href: "/impact", label: "Impact", key: "impact" },
   { href: "/merchant", label: "Merchant", key: "merchant", roles: ["merchant", "admin"] },
   { href: "/admin/dashboard", label: "Dashboard", key: "admin-dashboard", roles: ["admin"] },
