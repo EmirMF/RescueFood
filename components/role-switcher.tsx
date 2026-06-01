@@ -91,14 +91,18 @@ export function RoleSwitcher({ compact = false }: { compact?: boolean }) {
   async function logout() {
     setIsLoggingOut(true);
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        cache: "no-store",
+        credentials: "same-origin",
+      });
     } catch {
       // Cookie dihapus server-side — tetap lanjutkan logout
     }
     setIsOpen(false);
     setUser(null);
     notifySessionChanged();
-    // Paksa Next.js re-fetch semua server components di halaman aktif
+    router.replace("/");
     router.refresh();
     setIsLoggingOut(false);
   }
