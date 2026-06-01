@@ -63,6 +63,32 @@ export function rateLimit(
   };
 }
 
+export function getRateLimitStatus(
+  identifier: string,
+  config: RateLimitConfig
+): RateLimitResult {
+  const now = Date.now();
+  const entry = store.get(identifier);
+
+  if (!entry || entry.resetAt < now) {
+    return {
+      allowed: true,
+      remaining: config.maxRequests,
+      resetAt: now + config.windowMs,
+    };
+  }
+
+  return {
+    allowed: entry.count < config.maxRequests,
+    remaining: Math.max(0, config.maxRequests - entry.count),
+    resetAt: entry.resetAt,
+  };
+}
+
+export function clearRateLimit(identifier: string) {
+  store.delete(identifier);
+}
+
 export function getRateLimitHeaders(result: RateLimitResult) {
   return {
     "X-RateLimit-Limit": String(result.remaining + (result.allowed ? 1 : 0)),
