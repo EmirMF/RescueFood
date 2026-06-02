@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authCookieName } from "@/lib/auth";
 import { createHmac } from "crypto";
 
-// ── helpers (harus sama persis dengan lib/auth.ts) ──────────────────────────
+// ── Session helpers — identik dengan lib/auth.ts ─────────────────────────────
+const cookieName =
+  process.env.NODE_ENV === "production"
+    ? "__Host-rescuefood_session"
+    : "rescuefood_session";
+
 function getSecret() {
   const secret = process.env.AUTH_SECRET;
   if (process.env.NODE_ENV === "production" && !secret) {
@@ -20,7 +24,7 @@ function encodeSession(userId: string) {
   return `${userId}.${sign(userId)}`;
 }
 
-// ── types ────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 interface GoogleTokenResponse {
   access_token: string;
   id_token: string;
@@ -37,7 +41,7 @@ interface GoogleUserInfo {
   picture?: string;
 }
 
-// ── route ────────────────────────────────────────────────────────────────────
+// ── Route ─────────────────────────────────────────────────────────────────────
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
@@ -82,17 +86,13 @@ export async function GET(request: Request) {
     );
 
     if (!userInfoRes.ok) {
-      return NextResponse.redirect(
-        `${origin}/auth?error=google_userinfo_failed`,
-      );
+      return NextResponse.redirect(`${origin}/auth?error=google_userinfo_failed`);
     }
 
     const googleUser: GoogleUserInfo = await userInfoRes.json();
 
     if (!googleUser.email_verified) {
-      return NextResponse.redirect(
-        `${origin}/auth?error=google_email_unverified`,
-      );
+      return NextResponse.redirect(`${origin}/auth?error=google_email_unverified`);
     }
 
     // 3. Find or create user
@@ -106,7 +106,7 @@ export async function GET(request: Request) {
         data: {
           name: googleUser.name,
           email: googleUser.email,
-          passwordHash: "", // OAuth users have no password
+          passwordHash: "",
           role: "CUSTOMER",
           status: "ACTIVE",
         },
@@ -118,12 +118,12 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}/auth?error=account_suspended`);
     }
 
-    // 4. Build the session cookie value
+    // 4. Build session value
     const sessionValue = encodeSession(user.id);
     const isProduction = process.env.NODE_ENV === "production";
     const maxAge = 60 * 60 * 24 * 7; // 7 days
 
-    // 5. Determine destination
+    // 5. Destination after login
     const redirectMap: Record<string, string> = {
       MERCHANT: "/merchant",
       ADMIN: "/admin/dashboard",
@@ -132,16 +132,25 @@ export async function GET(request: Request) {
     };
     const destination = redirectMap[user.role] ?? "/marketplace";
 
-    // 6. Build redirect response and SET COOKIE directly on it
-    //    (avoids the cookies() API which can drop Set-Cookie on redirects)
+    // 6. Set cookie via raw Set-Cookie header — paling reliable di semua
+    //    versi Next.js, menghindari masalah dengan __Host- prefix dan redirect.
+    //
+    //    __Host- prefix rules: Secure; Path=/; NO Domain attribute.
+    //    Kita build string manual untuk kontrol penuh.
+    const cookieParts = [
+      `${cookieName}=${sessionValue}`,
+      `Path=/`,
+      `Max-Age=${maxAge}`,
+      `HttpOnly`,
+      `SameSite=${isProduction ? "Strict" : "Lax"}`,
+    ];
+    // __Host- prefix wajib Secure, dan tidak boleh ada Domain attribute
+    if (isProduction) {
+      cookieParts.push("Secure");
+    }
+
     const response = NextResponse.redirect(`${origin}${destination}`);
-    response.cookies.set(authCookieName, sessionValue, {
-      httpOnly: true,
-      sameSite: isProduction ? "strict" : "lax",
-      secure: isProduction,
-      path: "/",
-      maxAge,
-    });
+    response.headers.set("Set-Cookie", cookieParts.join("; "));
 
     return response;
   } catch (err) {
