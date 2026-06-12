@@ -58,6 +58,11 @@ export type FoodListing = {
   status: ListingStatus;
   originalPrice: number;
   rescuePrice: number;
+  floorPrice?: number;
+  currentPrice?: number;
+  platformFee?: number;
+  allergenTags?: string[];
+  co2SavedGrams?: number;
   quantity: number;
   pickupWindow: string;
   pickupLatitude?: number | null;

@@ -31,7 +31,40 @@ export async function POST(request: NextRequest) {
       return fail("Invalid signature", 403);
     }
 
-    // Find order by midtransOrderId
+    const paymentStatus = mapMidtransStatus(transaction_status, fraud_status);
+
+    // ── Subscription payment ──────────────────────────────────────────────
+    if (String(order_id).startsWith("SUB-")) {
+      const subPayment = await prisma.subscriptionPayment.findUnique({
+        where: { midtransOrderId: order_id },
+      });
+
+      if (!subPayment) {
+        console.error("SubscriptionPayment not found:", order_id);
+        return fail("Subscription payment not found", 404);
+      }
+
+      await prisma.subscriptionPayment.update({
+        where: { id: subPayment.id },
+        data: {
+          status: paymentStatus.toUpperCase(),
+          paymentMethod: payment_type ?? null,
+          paidAt: paymentStatus === "paid" ? new Date() : null,
+        },
+      });
+
+      if (paymentStatus === "paid") {
+        await prisma.user.update({
+          where: { id: subPayment.userId },
+          data: { subscriptionStatus: "active" },
+        });
+      }
+
+      console.log(`Subscription payment ${subPayment.id}: ${paymentStatus}`);
+      return ok({ message: "Notification processed" });
+    }
+
+    // ── Regular food order ────────────────────────────────────────────────
     const order = await prisma.order.findUnique({
       where: { midtransOrderId: order_id },
     });
@@ -40,9 +73,6 @@ export async function POST(request: NextRequest) {
       console.error("Order not found:", order_id);
       return fail("Order not found", 404);
     }
-
-    // Map Midtrans status to our payment status
-    const paymentStatus = mapMidtransStatus(transaction_status, fraud_status);
 
     await prisma.order.update({
       where: { id: order.id },

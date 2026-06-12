@@ -1,6 +1,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { fail, ok } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
+import { calculateDynamicPrice } from "@/lib/dynamic-pricing";
 
 export async function GET() {
   const currentUser = await getCurrentUser();
@@ -25,7 +26,18 @@ export async function GET() {
     },
   });
 
-  return ok(wishlists);
+  const enriched = wishlists.map((w) => {
+    const { currentPrice, platformFee } = calculateDynamicPrice(
+      w.listing.originalPrice,
+      w.listing.floorPrice,
+      w.listing.pickupStartTime,
+      w.listing.pickupEndTime,
+      w.listing.viewCount,
+    );
+    return { ...w, listing: { ...w.listing, currentPrice, platformFee } };
+  });
+
+  return ok(enriched);
 }
 
 export async function POST(request: Request) {

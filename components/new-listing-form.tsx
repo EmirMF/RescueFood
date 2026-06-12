@@ -13,6 +13,7 @@ type ListingFormInitialValues = {
   listingType: ListingType;
   originalPrice: number;
   rescuePrice: number;
+  floorPrice?: number;
   quantity: number;
   pickupStartTime: string | Date;
   pickupEndTime: string | Date;
@@ -23,6 +24,7 @@ type ListingFormInitialValues = {
   pickupLatitude?: number | null;
   pickupLongitude?: number | null;
   allergenInfo?: string | null;
+  allergenTags?: string[];
 };
 
 export function NewListingForm({
@@ -54,6 +56,9 @@ export function NewListingForm({
   const [rescuePrice, setRescuePrice] = useState(
     String(initialValues?.rescuePrice ?? 42000),
   );
+  const [floorPrice, setFloorPrice] = useState(
+    String(initialValues?.floorPrice ?? 20000),
+  );
   const [quantity, setQuantity] = useState(String(initialValues?.quantity ?? 8));
   const [pickupLocation] = useState(
     initialValues?.pickupLocation ??
@@ -68,6 +73,9 @@ export function NewListingForm({
   );
   const [allergenInfo, setAllergenInfo] = useState(
     initialValues?.allergenInfo ?? "",
+  );
+  const [allergenTags, setAllergenTags] = useState<string[]>(
+    initialValues?.allergenTags ?? [],
   );
   const [pickupStartTime, setPickupStartTime] = useState(
     initialValues?.pickupStartTime
@@ -87,9 +95,6 @@ export function NewListingForm({
   const [imageUrl, setImageUrl] = useState(
     initialValues?.imageUrl ??
       "https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=900&q=80",
-  );
-  const [impactKgCo2, setImpactKgCo2] = useState(
-    String(initialValues?.impactKgCo2 ?? 10),
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -151,6 +156,7 @@ export function NewListingForm({
           mode: "SALE",
           originalPrice: Number(originalPrice) || 0,
           discountedPrice: Number(rescuePrice) || 0,
+          floorPrice: Number(floorPrice) || 0,
           quantity: Number(quantity) || 1,
           pickupLocation: pickupLocation.trim() || "Bandung",
           pickupLatitude,
@@ -159,8 +165,8 @@ export function NewListingForm({
           pickupEndTime: new Date(pickupEndTime).toISOString(),
           consumeBefore: new Date(consumeBefore).toISOString(),
           allergenInfo: allergenInfo.trim() || null,
+          allergenTags,
           imageUrl,
-          impactKgCo2: Number(impactKgCo2) || 0,
         }),
       });
 
@@ -237,20 +243,48 @@ export function NewListingForm({
 
           <label className="grid gap-2">
             <span className="text-sm font-extrabold text-rf-text-onyx">
-              Allergen info
+              Allergen info (free text)
             </span>
             <textarea
-              rows={3}
+              rows={2}
               value={allergenInfo}
               onChange={(event) => setAllergenInfo(event.target.value)}
-              placeholder="Contoh: Mengandung gluten, telur, susu. Pisahkan dengan koma jika perlu."
+              placeholder="Contoh: Mengandung gluten, telur, susu."
               className="rf-focus-ring rounded-rf-control border border-rf-outline-variant bg-rf-surface-container-low px-4 py-3 text-sm font-semibold outline-none focus:border-rf-primary"
             />
           </label>
 
+          <fieldset className="grid gap-2">
+            <legend className="text-sm font-extrabold text-rf-text-onyx">
+              Allergen tags
+            </legend>
+            <div className="flex flex-wrap gap-3">
+              {["Gluten", "Dairy", "Egg", "Soy", "Peanut", "Seafood", "Halal", "Vegan"].map((tag) => (
+                <label key={tag} className="flex cursor-pointer items-center gap-2 rounded-full border border-rf-outline-variant px-3 py-1.5 text-sm font-semibold has-[:checked]:border-rf-primary has-[:checked]:bg-rf-primary/10">
+                  <input
+                    type="checkbox"
+                    className="accent-rf-primary"
+                    checked={allergenTags.includes(tag)}
+                    onChange={(e) =>
+                      setAllergenTags((prev) =>
+                        e.target.checked
+                          ? [...prev, tag]
+                          : prev.filter((t) => t !== tag),
+                      )
+                    }
+                  />
+                  {tag}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
           <div className="grid gap-4 md:grid-cols-3">
             <Field label="Harga normal" value={originalPrice} onChange={setOriginalPrice} />
-            <Field label="Harga rescue" value={rescuePrice} onChange={setRescuePrice} />
+            <Field label="Harga rescue (awal)" value={rescuePrice} onChange={setRescuePrice} />
+            <Field label="Floor price" value={floorPrice} onChange={setFloorPrice} />
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
             <Field label="Stok" value={quantity} onChange={setQuantity} />
           </div>
         </div>
@@ -285,7 +319,7 @@ export function NewListingForm({
             </span>
             <span className="flex items-center justify-between gap-3">
               <span>CO2 impact</span>
-              <strong className="text-rf-text-onyx">{Number(impactKgCo2) || 0}kg</strong>
+              <strong className="text-rf-text-onyx">AI estimated</strong>
             </span>
           </div>
         </aside>
@@ -365,7 +399,7 @@ export function NewListingForm({
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-[1fr_180px]">
+          <div className="grid gap-4">
             <label className="grid gap-2">
               <span className="text-sm font-extrabold text-rf-text-onyx">
                 Foto listing
@@ -385,11 +419,6 @@ export function NewListingForm({
                 {isUploading ? "Mengupload..." : imageUrl}
               </span>
             </label>
-            <Field
-              label="Impact CO2 kg"
-              value={impactKgCo2}
-              onChange={setImpactKgCo2}
-            />
           </div>
         </div>
 

@@ -1,99 +1,167 @@
 "use client";
 
 import Link from "next/link";
-import type { FoodListing, RescueOrder } from "@/lib/types";
+
+type Props = {
+  role: "CUSTOMER" | "MERCHANT" | "CHARITY" | "ADMIN" | null;
+  mealsRescued: number;
+  co2SavedGrams: number;
+  merchantCount: number;
+  topListings: { id: string; title: string; merchantName: string; co2SavedGrams: number; quantity: number; status: string }[];
+  recentActivity: { id: string; listingTitle: string; co2SavedGrams: number; createdAt: string }[];
+  customerData: { myMeals: number; myCo2Grams: number; moneySaved: number } | null;
+  merchantData: { storeOrders: number; storeMeals: number; storeCo2Grams: number; storeRevenue: number; topListing: { title: string; co2SavedGrams: number } | null } | null;
+  adminData: { revenueGenerated: number; platformFeesCollected: number; activeSubscribers: number; todayAssignments: number; orderBreakdown: { status: string; count: number }[] } | null;
+};
+
+function formatCo2(grams: number) {
+  if (grams === 0) return "0 g";
+  if (grams < 1000) return `${grams} g`;
+  return `${(grams / 1000).toFixed(2)} kg`;
+}
+
+function formatRp(amount: number) {
+  return `Rp ${amount.toLocaleString("id-ID")}`;
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  ACTIVE:   "bg-rf-primary text-white",
+  SOLD_OUT: "bg-amber-400 text-white",
+  EXPIRED:  "bg-rf-text-muted/30 text-rf-text-muted",
+  REMOVED:  "bg-rf-error/20 text-rf-error",
+  DRAFT:    "bg-rf-outline-variant/30 text-rf-text-muted",
+};
 
 export function ImpactReport({
-  initialListings = [],
-  initialMerchantCount = 0,
-  initialOrders = [],
-}: {
-  initialListings?: FoodListing[];
-  initialMerchantCount?: number;
-  initialOrders?: RescueOrder[];
-}) {
-  const listings = initialListings;
-  const orders = initialOrders;
-  const completedOrders = orders.filter((order) => order.status === "completed");
-  const listedImpact = listings.reduce(
-    (total, listing) => total + listing.impactKgCo2,
-    0,
-  );
-  const localMeals = completedOrders.reduce(
-    (total, order) => total + order.quantity,
-    0,
-  );
-
-  const metrics = [
-    {
-      label: "Meals rescued",
-      value: localMeals,
-      detail: "Completed customer pickups",
-    },
-    {
-      label: "Food saved",
-      value: `${listings.reduce((total, listing) => total + listing.quantity, 0)}kg`,
-      detail: "Estimated surplus weight",
-    },
-    {
-      label: "CO2 reduced",
-      value: `${listedImpact}kg`,
-      detail: "Based on listing impact estimates",
-    },
-    {
-      label: "Partner merchants",
-      value: initialMerchantCount,
-      detail: "Verified and pilot partners",
-    },
-  ];
-
+  role,
+  mealsRescued,
+  co2SavedGrams,
+  merchantCount,
+  topListings,
+  recentActivity,
+  customerData,
+  merchantData,
+  adminData,
+}: Props) {
   return (
-    <div className="grid gap-6">
-      <section className="grid gap-4 md:grid-cols-4">
-        {metrics.map((metric) => (
-          <div
-            key={metric.label}
-            className="rounded-rf-card bg-rf-surface-base p-5 shadow-[0px_10px_30px_rgba(0,0,0,0.04)]"
-          >
-            <p className="text-3xl font-black text-rf-primary">
-              {metric.value}
-            </p>
-            <p className="mt-1 text-sm font-extrabold text-rf-text-onyx">
-              {metric.label}
-            </p>
-            <p className="mt-2 text-xs font-semibold leading-5 text-rf-text-muted">
-              {metric.detail}
-            </p>
-          </div>
-        ))}
+    <div className="grid gap-8">
+
+      {/* ── Section 1: Public aggregate (all roles + guests) ── */}
+      <section>
+        <h2 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-rf-text-muted">
+          Platform impact
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <MetricCard icon="restaurant" label="Meals rescued" value={mealsRescued.toLocaleString("id-ID")} detail="Total porsi dari semua order selesai" color="primary" />
+          <MetricCard icon="co2" label="CO2 diselamatkan" value={formatCo2(co2SavedGrams)} detail="Estimasi AI dari listing yang terjual" color="secondary" />
+          <MetricCard icon="storefront" label="Partner merchant" value={merchantCount.toLocaleString("id-ID")} detail="Merchant terverifikasi aktif" color="primary" />
+        </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1fr_420px]">
-        <div className="rounded-rf-card bg-rf-surface-base p-5 shadow-[0px_10px_30px_rgba(0,0,0,0.04)]">
-          <p className="text-sm font-extrabold uppercase tracking-wider text-rf-secondary">
-            Impact sources
-          </p>
-          <h2 className="mt-1 text-2xl font-black text-rf-text-onyx">
-            Kontribusi dari marketplace
+      {/* ── Section 2: Customer personal contribution ── */}
+      {role === "CUSTOMER" && customerData && (
+        <section>
+          <h2 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-rf-text-muted">
+            Kontribusi kamu
           </h2>
-          <div className="mt-5 grid gap-3">
-            {listings.map((listing) => (
-              <Link
-                key={listing.id}
-                href={`/listings/${listing.id}`}
-                className="rf-focus-ring rounded-rf-control bg-rf-surface-container-low p-4 transition hover:bg-rf-surface-container"
-              >
-                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-                  <div>
-                    <p className="font-black text-rf-text-onyx">
-                      {listing.title}
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-rf-text-muted">
-                      Diskon · {listing.quantity} tersedia
-                    </p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <MetricCard icon="lunch_dining" label="Meals yang kamu rescue" value={customerData.myMeals.toLocaleString("id-ID")} detail="Order selesai atas namamu" color="primary" />
+            <MetricCard icon="eco" label="CO2 kamu selamatkan" value={formatCo2(customerData.myCo2Grams)} detail="Dari listing yang kamu beli" color="secondary" />
+            <MetricCard icon="savings" label="Uang dihemat" value={formatRp(customerData.moneySaved)} detail="Selisih harga normal vs harga rescue" color="tertiary" />
+          </div>
+          {customerData.myMeals === 0 && (
+            <p className="mt-3 rounded-xl bg-rf-surface-container-low px-4 py-3 text-sm font-semibold text-rf-text-muted">
+              Belum ada order selesai. Mulai rescue makanan di{" "}
+              <a href="/marketplace" className="font-extrabold text-rf-primary underline">marketplace</a>!
+            </p>
+          )}
+        </section>
+      )}
+
+      {/* ── Section 3: Merchant store contribution ── */}
+      {role === "MERCHANT" && merchantData && (
+        <section>
+          <h2 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-rf-text-muted">
+            Dampak toko kamu
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricCard icon="inventory_2" label="Order terpenuhi" value={merchantData.storeOrders.toLocaleString("id-ID")} detail="Order COMPLETED dari toko kamu" color="primary" />
+            <MetricCard icon="restaurant" label="Porsi terselamatkan" value={merchantData.storeMeals.toLocaleString("id-ID")} detail="Total quantity dari order selesai" color="secondary" />
+            <MetricCard icon="eco" label="CO2 dari tokomu" value={formatCo2(merchantData.storeCo2Grams)} detail="Estimasi CO2 via AI" color="secondary" />
+            <MetricCard icon="payments" label="Revenue toko" value={formatRp(merchantData.storeRevenue)} detail="Dari order yang sudah dibayar" color="primary" />
+          </div>
+          {merchantData.topListing && (
+            <div className="mt-4 rounded-xl bg-rf-surface-container-low px-5 py-4">
+              <p className="text-xs font-extrabold uppercase tracking-wider text-rf-secondary">Listing terbaik</p>
+              <p className="mt-1 font-bold text-rf-text-onyx">{merchantData.topListing.title}</p>
+              <p className="text-sm font-semibold text-rf-text-muted">CO2: {formatCo2(merchantData.topListing.co2SavedGrams)}</p>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ── Section 4: Admin-only full dashboard ── */}
+      {role === "ADMIN" && adminData && (
+        <section>
+          <h2 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-rf-text-muted">
+            Platform dashboard (admin only)
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricCard icon="attach_money" label="Gross revenue" value={formatRp(adminData.revenueGenerated)} detail="Total dari paid orders" color="primary" />
+            <MetricCard icon="percent" label="Platform fee (10%)" value={formatRp(adminData.platformFeesCollected)} detail="Komisi yang terkumpul" color="secondary" />
+            <MetricCard icon="subscriptions" label="Subscriber aktif" value={adminData.activeSubscribers.toLocaleString("id-ID")} detail={`${adminData.todayAssignments} di-assign hari ini`} color="tertiary" />
+            <MetricCard icon="receipt_long" label="Total order" value={adminData.orderBreakdown.reduce((s, b) => s + b.count, 0).toLocaleString("id-ID")} detail="Semua status" color="primary" />
+          </div>
+
+          <div className="mt-4 rounded-xl bg-rf-surface-base p-6 shadow-[0px_10px_30px_rgba(0,0,0,0.04)]">
+            <p className="text-xs font-extrabold uppercase tracking-wider text-rf-secondary">Order breakdown</p>
+            <div className="mt-4 grid gap-3">
+              {adminData.orderBreakdown.map((b) => {
+                const total = adminData.orderBreakdown.reduce((s, x) => s + x.count, 0);
+                const pct = total > 0 ? Math.round((b.count / total) * 100) : 0;
+                return (
+                  <div key={b.status}>
+                    <div className="flex justify-between text-sm font-semibold">
+                      <span className="text-rf-text-onyx">{b.status}</span>
+                      <span className="text-rf-text-muted">{b.count} ({pct}%)</span>
+                    </div>
+                    <div className="mt-1 h-2 w-full rounded-full bg-rf-surface-container-low">
+                      <div className="h-2 rounded-full bg-rf-primary transition-all" style={{ width: `${pct}%` }} />
+                    </div>
                   </div>
-                  <span className="w-fit rounded-full bg-rf-primary-fixed px-3 py-1 text-xs font-extrabold text-rf-primary">
-                    {listing.impactKgCo2}kg CO2
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Section 5: Top listings + recent activity (all roles) ── */}
+      <section className="grid gap-6 xl:grid-cols-[1fr_360px]">
+        <div className="rounded-xl bg-rf-surface-base p-6 shadow-[0px_10px_30px_rgba(0,0,0,0.04)]">
+          <p className="text-xs font-extrabold uppercase tracking-wider text-rf-secondary">Top CO2 impact</p>
+          <h2 className="mt-1 text-2xl font-black text-rf-text-onyx">Listing dengan CO2 terbesar</h2>
+          <div className="mt-5 grid gap-2">
+            {topListings.length === 0 ? (
+              <p className="text-sm text-rf-text-muted">Belum ada listing.</p>
+            ) : topListings.map((l) => (
+              <Link key={l.id} href={`/listings/${l.id}`}
+                className="flex items-center justify-between gap-4 rounded-lg bg-rf-surface-container-low px-4 py-3 transition hover:bg-rf-surface-container"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-bold text-rf-text-onyx">{l.title}</p>
+                  <p className="text-xs font-semibold text-rf-text-muted">{l.merchantName} · {l.quantity} porsi</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-extrabold ${STATUS_COLORS[l.status] ?? "bg-rf-surface-container text-rf-text-muted"}`}>
+                    {l.status}
+                  </span>
+                  <span className="whitespace-nowrap rounded-full bg-rf-primary/10 px-3 py-1 text-xs font-extrabold text-rf-primary">
+                    {formatCo2(l.co2SavedGrams)}
                   </span>
                 </div>
               </Link>
@@ -101,62 +169,47 @@ export function ImpactReport({
           </div>
         </div>
 
-        <aside className="h-fit rounded-rf-card bg-rf-surface-base p-5 shadow-[0px_20px_40px_rgba(21,128,61,0.08)]">
-          <p className="text-sm font-extrabold uppercase tracking-wider text-rf-secondary">
-            Report status
-          </p>
-          <h2 className="mt-1 text-2xl font-black text-rf-text-onyx">
-            Status prototype
-          </h2>
+        <div className="rounded-xl bg-rf-surface-base p-6 shadow-[0px_10px_30px_rgba(0,0,0,0.04)]">
+          <p className="text-xs font-extrabold uppercase tracking-wider text-rf-secondary">Aktivitas terbaru</p>
+          <h2 className="mt-1 text-2xl font-black text-rf-text-onyx">Rescue terbaru</h2>
           <div className="mt-5 grid gap-3">
-            <MiniMetric label="Completed pickups" value={completedOrders.length} />
-            <MiniMetric label="Active listings" value={listings.length} />
+            {recentActivity.length === 0 ? (
+              <p className="text-sm text-rf-text-muted">Belum ada order selesai.</p>
+            ) : recentActivity.map((a) => (
+              <div key={a.id} className="rounded-lg bg-rf-surface-container-low px-4 py-3">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="truncate text-sm font-bold text-rf-text-onyx">{a.listingTitle}</p>
+                  <span className="shrink-0 whitespace-nowrap rounded-full bg-rf-primary/10 px-2 py-0.5 text-xs font-extrabold text-rf-primary">
+                    {formatCo2(a.co2SavedGrams)}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-rf-text-muted">{formatDate(a.createdAt)}</p>
+              </div>
+            ))}
           </div>
-          <p className="mt-5 rounded-rf-control bg-rf-surface-container-low p-4 text-sm font-semibold leading-6 text-rf-text-muted">
-            Angka impact dihitung dari listing, order, dan merchant
-            terverifikasi di database.
-          </p>
-        </aside>
-      </section>
-
-      <section className="rounded-rf-card bg-rf-surface-base p-5 shadow-[0px_10px_30px_rgba(0,0,0,0.04)]">
-        <p className="text-sm font-extrabold uppercase tracking-wider text-rf-secondary">
-          Report narrative
-        </p>
-        <h2 className="mt-1 text-2xl font-black text-rf-text-onyx">
-          Bagaimana dampak dihitung
-        </h2>
-        <div className="mt-5 grid gap-3 md:grid-cols-2">
-          <ReportStep
-            title="1. Listing impact"
-            text="Setiap listing membawa estimasi CO2 yang terselamatkan."
-          />
-          <ReportStep
-            title="2. Pickup completion"
-            text="Order selesai menambah jumlah meals rescued."
-          />
         </div>
       </section>
+
     </div>
   );
 }
 
-function MiniMetric({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-rf-control bg-rf-surface-container-low p-4">
-      <p className="text-2xl font-black text-rf-primary">{value}</p>
-      <p className="mt-1 text-sm font-bold text-rf-text-muted">{label}</p>
-    </div>
-  );
-}
+function MetricCard({
+  icon, label, value, detail, color,
+}: {
+  icon: string; label: string; value: string; detail: string; color: "primary" | "secondary" | "tertiary";
+}) {
+  const bg = { primary: "bg-rf-primary/10 text-rf-primary", secondary: "bg-rf-secondary/10 text-rf-secondary", tertiary: "bg-rf-tertiary-container/20 text-rf-tertiary" }[color];
+  const text = { primary: "text-rf-primary", secondary: "text-rf-secondary", tertiary: "text-rf-tertiary" }[color];
 
-function ReportStep({ title, text }: { title: string; text: string }) {
   return (
-    <div className="rounded-rf-control bg-rf-surface-container-low p-4">
-      <p className="font-black text-rf-primary">{title}</p>
-      <p className="mt-2 text-sm font-semibold leading-6 text-rf-text-muted">
-        {text}
-      </p>
+    <div className="rounded-xl bg-rf-surface-base p-5 shadow-[0px_10px_30px_rgba(0,0,0,0.04)]">
+      <div className={`mb-3 flex size-10 items-center justify-center rounded-full ${bg}`}>
+        <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>{icon}</span>
+      </div>
+      <p className={`text-3xl font-black ${text}`}>{value}</p>
+      <p className="mt-1 text-sm font-extrabold text-rf-text-onyx">{label}</p>
+      <p className="mt-1 text-xs font-semibold leading-5 text-rf-text-muted">{detail}</p>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { fail, ok } from "@/lib/api-response";
+import { calculateDynamicPrice } from "@/lib/dynamic-pricing";
 
 export async function GET(
   _request: Request,
@@ -18,7 +19,15 @@ export async function GET(
     return fail("Listing not found", 404);
   }
 
-  return ok(listing);
+  const { currentPrice, platformFee } = calculateDynamicPrice(
+    listing.originalPrice,
+    listing.floorPrice,
+    listing.pickupStartTime,
+    listing.pickupEndTime,
+    listing.viewCount,
+  );
+
+  return ok({ ...listing, currentPrice, platformFee });
 }
 
 function toListingStatus(status: unknown) {
@@ -106,6 +115,12 @@ export async function PATCH(
         : {}),
       ...(typeof body.discountedPrice === "number"
         ? { discountedPrice: body.discountedPrice }
+        : {}),
+      ...(typeof body.floorPrice === "number"
+        ? { floorPrice: body.floorPrice }
+        : {}),
+      ...(Array.isArray(body.allergenTags)
+        ? { allergenTags: body.allergenTags.filter((t: unknown) => typeof t === "string") }
         : {}),
       ...(typeof body.quantity === "number" ? { quantity: body.quantity } : {}),
       ...(body.mode === "SALE" || body.mode === "DONATION"

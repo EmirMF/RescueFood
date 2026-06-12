@@ -4,10 +4,18 @@ import Link from "next/link";
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import { FavoriteButton } from "@/components/favorite-button";
+import { secureFetch } from "@/lib/secure-fetch";
 import type { FoodCategory, FoodListing } from "@/lib/types";
+
+type AssignedMeal = {
+  title: string;
+  merchantName: string;
+  pickupLocation: string;
+};
 
 type MarketplaceBrowserProps = {
   listings: FoodListing[];
+  isSubscriber?: boolean;
 };
 
 const categoryLabels: Record<FoodCategory | "all", string> = {
@@ -20,29 +28,79 @@ const categoryLabels: Record<FoodCategory | "all", string> = {
   produce: "Produce",
 };
 
-export function MarketplaceBrowser({ listings }: MarketplaceBrowserProps) {
+type AssignState = "idle" | "locating" | "assigning" | "done" | "error" | "already";
+
+export function MarketplaceBrowser({ listings, isSubscriber }: MarketplaceBrowserProps) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<FoodCategory | "all">("all");
   const [mode, setMode] = useState<"all" | "sale">("all");
+  const [assignedMeal, setAssignedMeal] = useState<AssignedMeal | null>(null);
+  const [assignState, setAssignState] = useState<AssignState>("idle");
+  const [assignError, setAssignError] = useState("");
+
+  async function claimDailyMeal() {
+    if (!navigator.geolocation) {
+      setAssignState("error");
+      setAssignError("Browser tidak mendukung geolocation.");
+      return;
+    }
+
+    setAssignState("locating");
+    setAssignError("");
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        setAssignState("assigning");
+        const { latitude, longitude } = pos.coords;
+        try {
+          const res = await secureFetch("/api/subscriptions/assign", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ latitude, longitude }),
+          });
+          const result = await res.json();
+          if (!res.ok) {
+            setAssignState("error");
+            setAssignError(result.error ?? "Gagal mengamankan porsi.");
+            return;
+          }
+          if (!result.data?.isNew) {
+            setAssignState("already");
+            setAssignedMeal(result.data?.assignment?.listing ?? null);
+          } else {
+            setAssignState("done");
+            setAssignedMeal(result.data.listing);
+          }
+        } catch {
+          setAssignState("error");
+          setAssignError("Tidak bisa terhubung ke server.");
+        }
+      },
+      (err) => {
+        setAssignState("error");
+        setAssignError(
+          err.code === 1
+            ? "Izin lokasi ditolak. Aktifkan di pengaturan browser."
+            : "Lokasi tidak tersedia. Coba lagi.",
+        );
+      },
+      { timeout: 8000 },
+    );
+  }
 
   const visibleListings = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
     return listings.filter((listing) => {
-      if (listing.type !== "sale") {
-        return false;
-      }
+      if (listing.type !== "sale") return false;
 
-      const merchantName = listing.merchantName;
-      const merchantLocation = listing.merchantLocation;
       const matchesQuery =
         normalizedQuery.length === 0 ||
         listing.title.toLowerCase().includes(normalizedQuery) ||
         listing.description.toLowerCase().includes(normalizedQuery) ||
-        merchantName?.toLowerCase().includes(normalizedQuery) ||
-        merchantLocation?.toLowerCase().includes(normalizedQuery);
-      const matchesCategory =
-        category === "all" || listing.category === category;
+        listing.merchantName?.toLowerCase().includes(normalizedQuery) ||
+        listing.merchantLocation?.toLowerCase().includes(normalizedQuery);
+      const matchesCategory = category === "all" || listing.category === category;
       const matchesMode = mode === "all" || listing.type === mode;
 
       return matchesQuery && matchesCategory && matchesMode;
@@ -50,7 +108,87 @@ export function MarketplaceBrowser({ listings }: MarketplaceBrowserProps) {
   }, [category, listings, mode, query]);
 
   return (
-    <section id="marketplace" className="mx-auto max-w-7xl px-5 py-10 md:px-8">
+    <>
+      {isSubscriber && (
+        <div className="mx-auto max-w-7xl px-5 pt-6 md:px-8">
+          {assignState === "idle" && (
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-rf-primary/20 bg-rf-primary/5 px-5 py-4">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-2xl text-rf-primary" style={{ fontVariationSettings: "'FILL' 1" }}>
+                  lunch_dining
+                </span>
+                <p className="text-sm font-extrabold text-rf-text-onyx">
+                  Kamu berlangganan — amankan porsi gratis hari ini!
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={claimDailyMeal}
+                className="rf-focus-ring shrink-0 rounded-full bg-rf-primary-container px-4 py-2 text-sm font-extrabold text-white transition hover:bg-rf-primary"
+              >
+                Cari Porsi Terdekat
+              </button>
+            </div>
+          )}
+
+          {(assignState === "locating" || assignState === "assigning") && (
+            <div className="flex items-center gap-3 rounded-xl border border-rf-outline-variant/30 bg-rf-surface-container-low px-5 py-4">
+              <svg className="h-5 w-5 animate-spin text-rf-primary" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              <p className="text-sm font-semibold text-rf-text-muted">
+                {assignState === "locating" ? "Mendapatkan lokasi kamu…" : "Mencari makanan terdekat…"}
+              </p>
+            </div>
+          )}
+
+          {assignState === "done" && assignedMeal && (
+            <div className="flex items-start justify-between gap-4 rounded-xl border border-rf-primary/30 bg-rf-primary/10 px-5 py-4">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-2xl text-rf-primary" style={{ fontVariationSettings: "'FILL' 1" }}>
+                  check_circle
+                </span>
+                <div>
+                  <p className="text-sm font-extrabold text-rf-primary">Porsi hari ini berhasil diamankan!</p>
+                  <p className="text-sm font-semibold text-rf-text-onyx">{assignedMeal.title} — {assignedMeal.merchantName}</p>
+                  <p className="text-xs font-semibold text-rf-text-muted">{assignedMeal.pickupLocation}</p>
+                </div>
+              </div>
+              <button type="button" onClick={() => setAssignState("idle")} className="shrink-0 text-rf-text-muted hover:text-rf-text-onyx">
+                <span className="material-symbols-outlined text-base">close</span>
+              </button>
+            </div>
+          )}
+
+          {assignState === "already" && (
+            <div className="flex items-center gap-3 rounded-xl border border-rf-secondary/30 bg-rf-secondary/10 px-5 py-4">
+              <span className="material-symbols-outlined text-xl text-rf-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>
+                info
+              </span>
+              <p className="text-sm font-semibold text-rf-text-onyx">
+                Porsi hari ini sudah diamankan sebelumnya. Cek di halaman Orders.
+              </p>
+            </div>
+          )}
+
+          {assignState === "error" && (
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-rf-error/20 bg-rf-error-container/30 px-5 py-4">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-xl text-rf-error" style={{ fontVariationSettings: "'FILL' 1" }}>
+                  error
+                </span>
+                <p className="text-sm font-semibold text-rf-error">{assignError}</p>
+              </div>
+              <button type="button" onClick={() => setAssignState("idle")} className="shrink-0 text-sm font-extrabold text-rf-error hover:underline">
+                Coba lagi
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      <section id="marketplace" className="mx-auto max-w-7xl px-5 py-10 md:px-8">
       <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <p className="text-sm font-extrabold uppercase tracking-wider text-rf-secondary">
@@ -144,6 +282,7 @@ export function MarketplaceBrowser({ listings }: MarketplaceBrowserProps) {
         </div>
       )}
     </section>
+    </>
   );
 }
 
@@ -221,7 +360,7 @@ function FoodCard({ listing }: { listing: FoodListing }) {
               Rp{listing.originalPrice.toLocaleString("id-ID")}
             </p>
             <p className="text-xl font-black text-rf-primary">
-              Rp{listing.rescuePrice.toLocaleString("id-ID")}
+              Rp{(listing.currentPrice ?? listing.rescuePrice).toLocaleString("id-ID")}
             </p>
           </div>
         </div>

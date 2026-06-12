@@ -5,6 +5,8 @@ import { AppHeader } from "@/components/app-header";
 import { ListingActionPanel } from "@/components/listing-action-panel";
 import { mapApiListingToFoodListing } from "@/lib/listing-mapper";
 import { prisma } from "@/lib/prisma";
+import { calculateDynamicPrice } from "@/lib/dynamic-pricing";
+import { ViewTracker } from "@/components/view-tracker";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +50,14 @@ export default async function ListingDetail({
     },
   });
 
-  const listing = mapApiListingToFoodListing(dbListing);
+  const { currentPrice, platformFee } = calculateDynamicPrice(
+    dbListing.originalPrice,
+    dbListing.floorPrice,
+    dbListing.pickupStartTime,
+    dbListing.pickupEndTime,
+    dbListing.viewCount,
+  );
+  const listing = mapApiListingToFoodListing({ ...dbListing, currentPrice, platformFee });
   if (listing.type !== "sale") {
     notFound();
   }
@@ -62,6 +71,7 @@ export default async function ListingDetail({
 
   return (
     <main className="min-h-screen bg-rf-background text-rf-text-onyx">
+      <ViewTracker listingId={id} />
       <AppHeader
         active="marketplace"
         actions={[{ href: "/marketplace", label: "Kembali" }]}
@@ -194,11 +204,18 @@ export default async function ListingDetail({
                   Available
                 </span>
                 <div className="font-heading text-[32px] font-bold leading-10 text-rf-text-onyx">
-                  {listing.rescuePrice === 0
+                  {(listing.currentPrice ?? listing.rescuePrice) === 0
                     ? "Gratis"
-                    : `Rp ${listing.rescuePrice.toLocaleString("id-ID")}`}
+                    : `Rp ${(listing.currentPrice ?? listing.rescuePrice).toLocaleString("id-ID")}`}
                 </div>
-                {listing.rescuePrice > 0 ? (
+                <div className="mt-1 flex items-center gap-2">
+                  {listing.platformFee ? (
+                    <span className="text-xs font-semibold text-rf-text-muted">
+                      + Rp {listing.platformFee.toLocaleString("id-ID")} platform fee
+                    </span>
+                  ) : null}
+                </div>
+                {(listing.currentPrice ?? listing.rescuePrice) > 0 ? (
                   <div className="text-sm text-rf-text-muted line-through">
                     Est. Value: Rp {listing.originalPrice.toLocaleString("id-ID")}
                   </div>

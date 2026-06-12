@@ -79,22 +79,28 @@ enum NotificationType {
 }
 
 model User {
-  id           String     @id @default(cuid())
-  name         String
-  email        String     @unique
-  passwordHash String
-  role         UserRole
-  status       UserStatus @default(ACTIVE)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id                   String     @id @default(cuid())
+  name                 String
+  email                String     @unique
+  passwordHash         String
+  role                 UserRole
+  status               UserStatus @default(ACTIVE)
+  subscriptionStatus   String?
+  dietaryPreferences   String[]
+  latitude             Float?
+  longitude            Float?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
 
-  merchant      Merchant?
-  charity       Charity?
-  orders        Order[]
-  reviews       Review[]
-  wishlists     Wishlist[]
-  notifications Notification[]
-  messages      Message[]
+  merchant                Merchant?
+  charity                 Charity?
+  orders                  Order[]
+  reviews                 Review[]
+  wishlists               Wishlist[]
+  notifications           Notification[]
+  messages                Message[]
+  subscriptionAssignments SubscriptionAssignment[]
+  subscriptionPayments    SubscriptionPayment[]
 }
 
 model Merchant {
@@ -139,6 +145,7 @@ model FoodListing {
   imageUrl        String
   originalPrice   Int
   discountedPrice Int
+  floorPrice      Int           @default(0)
   quantity        Int
   mode            ListingMode
   pickupLocation  String
@@ -148,15 +155,19 @@ model FoodListing {
   pickupEndTime   DateTime
   consumeBefore   DateTime
   allergenInfo    String?
+  allergenTags    String[]
   impactKgCo2     Int           @default(0)
+  co2SavedGrams   Int           @default(0)
+  viewCount       Int           @default(0)
   status          ListingStatus @default(DRAFT)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
-  merchant       Merchant        @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  orders         Order[]
-  donationClaims DonationClaim[]
-  wishlists      Wishlist[]
+  merchant                Merchant                 @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  orders                  Order[]
+  donationClaims          DonationClaim[]
+  wishlists               Wishlist[]
+  subscriptionAssignments SubscriptionAssignment[]
 }
 
 model Order {
@@ -173,15 +184,17 @@ model Order {
   paymentMethod     String?
   midtransToken     String?
   midtransOrderId   String?       @unique
-  paidAt            DateTime?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  paidAt                DateTime?
+  isSubscriptionOrder   Boolean       @default(false)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
 
-  customer User        @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  listing  FoodListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  merchant Merchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  review   Review?
-  messages Message[]
+  customer               User                    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  listing                FoodListing             @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  merchant               Merchant                @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  review                 Review?
+  messages               Message[]
+  subscriptionAssignment SubscriptionAssignment?
 }
 
 model AppSetting {
@@ -263,4 +276,37 @@ model Message {
   sender User  @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([orderId, createdAt])
+}
+
+model SubscriptionPayment {
+  id              String   @id @default(cuid())
+  userId          String
+  midtransOrderId String   @unique
+  midtransToken   String?
+  amount          Int
+  status          String   @default("PENDING")
+  paymentMethod   String?
+  paidAt          DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model SubscriptionAssignment {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+  orderId   String?  @unique
+  date      String
+  createdAt DateTime @default(now())
+
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing FoodListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  order   Order?      @relation(fields: [orderId], references: [id])
+
+  @@unique([userId, date])
+  @@index([userId])
 }

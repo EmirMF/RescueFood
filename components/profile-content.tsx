@@ -9,6 +9,17 @@ import { MerchantLocationPicker } from "@/components/merchant-location-picker";
 import { ReviewModal } from "./review-modal";
 import { secureFetch } from "@/lib/secure-fetch";
 
+const DIETARY_OPTIONS = [
+  "Halal",
+  "Vegan",
+  "Vegetarian",
+  "Peanut-Free",
+  "Gluten-Free",
+  "Dairy-Free",
+  "No Seafood",
+  "No Egg",
+];
+
 type Review = {
   id: string;
   orderId: string;
@@ -426,6 +437,128 @@ function getPwdStrength(pwd: string): { score: number } {
   if (/[0-9]/.test(pwd)) score++;
   if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd)) score++;
   return { score };
+}
+
+function DietaryPreferencesPanel() {
+  const [prefs, setPrefs] = useState<string[]>([]);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
+  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  useEffect(() => {
+    secureFetch("/api/subscriptions")
+      .then((r) => r.json())
+      .then((result) => {
+        if (result.data) {
+          setPrefs(result.data.dietaryPreferences ?? []);
+          setSubscriptionStatus(result.data.subscriptionStatus ?? null);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  async function save() {
+    setStatus("saving");
+    try {
+      const res = await secureFetch("/api/subscriptions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dietaryPreferences: prefs }),
+      });
+      setStatus(res.ok ? "saved" : "error");
+      setTimeout(() => setStatus("idle"), 3000);
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  async function toggleSubscription() {
+    const next = subscriptionStatus === "active" ? "inactive" : "active";
+    try {
+      const res = await secureFetch("/api/subscriptions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscriptionStatus: next }),
+      });
+      const result = await res.json();
+      if (res.ok) setSubscriptionStatus(result.data.subscriptionStatus);
+    } catch {
+      /* noop */
+    }
+  }
+
+  return (
+    <div className="rounded-xl bg-rf-surface-base p-6 shadow-[0px_10px_30px_rgba(0,0,0,0.04)] md:p-8">
+      <div className="mb-5 flex items-start justify-between border-b border-rf-outline-variant/20 pb-4">
+        <div>
+          <p className="text-sm font-extrabold uppercase tracking-wider text-rf-secondary">
+            Meal Plan
+          </p>
+          <h2 className="mt-1 font-heading text-2xl font-bold text-rf-text-onyx">
+            Dietary Preferences &amp; Subscription
+          </h2>
+        </div>
+        <button
+          type="button"
+          onClick={toggleSubscription}
+          className={`rounded-full px-4 py-2 text-sm font-extrabold transition ${
+            subscriptionStatus === "active"
+              ? "bg-rf-error-container text-rf-error hover:opacity-80"
+              : "bg-rf-primary-container text-white hover:bg-rf-primary"
+          }`}
+        >
+          {subscriptionStatus === "active" ? "Cancel Subscription" : "Subscribe"}
+        </button>
+      </div>
+
+      <p className="mb-4 text-sm font-semibold text-rf-text-muted">
+        Select dietary requirements. Auto-assigned surplus packages will never
+        contain these allergens.
+      </p>
+
+      <div className="flex flex-wrap gap-3">
+        {DIETARY_OPTIONS.map((opt) => (
+          <label
+            key={opt}
+            className="flex cursor-pointer items-center gap-2 rounded-full border border-rf-outline-variant px-3 py-1.5 text-sm font-semibold has-[:checked]:border-rf-primary has-[:checked]:bg-rf-primary/10"
+          >
+            <input
+              type="checkbox"
+              className="accent-rf-primary"
+              checked={prefs.includes(opt)}
+              onChange={(e) =>
+                setPrefs((prev) =>
+                  e.target.checked ? [...prev, opt] : prev.filter((p) => p !== opt),
+                )
+              }
+            />
+            {opt}
+          </label>
+        ))}
+      </div>
+
+      {status === "saved" && (
+        <p className="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+          Preferences saved.
+        </p>
+      )}
+      {status === "error" && (
+        <p className="mt-4 rounded-xl bg-rf-error-container px-4 py-3 text-sm font-semibold text-rf-error">
+          Failed to save. Try again.
+        </p>
+      )}
+
+      <div className="mt-5 flex justify-end">
+        <button
+          type="button"
+          onClick={save}
+          disabled={status === "saving"}
+          className="rf-focus-ring rounded-full bg-rf-primary-container px-5 py-2 text-sm font-extrabold text-white transition hover:bg-rf-primary disabled:opacity-60"
+        >
+          {status === "saving" ? "Saving..." : "Save Preferences"}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function ProfilePanel({
@@ -1018,6 +1151,9 @@ function ProfilePanel({
           </div>
         )}
       </div>
+
+      {/* ── Dietary Preferences & Subscription ─────────────────────── */}
+      {role === "customer" && <DietaryPreferencesPanel />}
 
       {/* ── Merchant location ────────────────────────────────────────── */}
       {role === "merchant" && (

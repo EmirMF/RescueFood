@@ -2,10 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { AppHeader } from "@/components/app-header";
 import { FavoriteButton } from "@/components/favorite-button";
 import { useSessionRole } from "@/components/role-switcher";
+import { secureFetch } from "@/lib/secure-fetch";
 import type { FoodCategory, FoodListing } from "@/lib/types";
 
 const heroImage =
@@ -34,6 +35,86 @@ export function HomeContent({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<FoodCategory | "all">("all");
   const [filterType, setFilterType] = useState<"all" | "sale">("all");
+
+  const [isSubscriber, setIsSubscriber] = useState<boolean | null>(null);
+  const [subscribeLoading, setSubscribeLoading] = useState(false);
+  const [subscribeError, setSubscribeError] = useState("");
+  const [assignState, setAssignState] = useState<"idle"|"locating"|"assigning"|"done"|"already"|"error">("idle");
+  const [assignedMeal, setAssignedMeal] = useState<{title:string;merchantName:string;pickupLocation:string}|null>(null);
+  const [assignError, setAssignError] = useState("");
+
+  useEffect(() => {
+    if (role === null) return;
+    if (role !== "customer") { setIsSubscriber(false); return; }
+    secureFetch("/api/subscriptions")
+      .then(r => r.json())
+      .then(result => { setIsSubscriber(result.data?.subscriptionStatus === "active"); })
+      .catch(() => { setIsSubscriber(false); });
+  }, [role]);
+
+  async function handleSubscribe() {
+    setSubscribeLoading(true);
+    try {
+      const res = await secureFetch("/api/subscriptions/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const result = await res.json();
+      if (!res.ok) { setSubscribeLoading(false); return; }
+
+      const { token, midtransConfig: cfg } = result.data;
+
+      if (cfg.demoMode) {
+        window.location.href = "/subscriptions/onboarding?payment=finish";
+        return;
+      }
+
+      const loadSnap = () => new Promise<void>((resolve, reject) => {
+        if (window.snap) { resolve(); return; }
+        const script = document.createElement("script");
+        script.src = cfg.snapScriptUrl;
+        script.setAttribute("data-client-key", cfg.clientKey);
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error("Snap script failed to load"));
+        document.head.appendChild(script);
+      });
+
+      await loadSnap();
+      setSubscribeLoading(false);
+
+      window.snap?.pay(token, {
+        onSuccess: () => { window.location.href = "/subscriptions/onboarding?payment=finish"; },
+        onPending: () => { window.location.href = "/subscriptions/onboarding?payment=pending"; },
+        onError:   () => { /* stay on page */ },
+        onClose:   () => { /* user closed popup */ },
+      });
+    } catch {
+      setSubscribeLoading(false);
+    }
+  }
+
+  async function claimDailyMeal() {
+    if (!navigator.geolocation) { setAssignState("error"); setAssignError("Browser tidak mendukung geolocation."); return; }
+    setAssignState("locating"); setAssignError("");
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        setAssignState("assigning");
+        try {
+          const res = await secureFetch("/api/subscriptions/assign", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+          });
+          const result = await res.json();
+          if (!res.ok) { setAssignState("error"); setAssignError(result.error ?? "Gagal mengamankan porsi."); return; }
+          if (!result.data?.isNew) { setAssignState("already"); }
+          else { setAssignState("done"); setAssignedMeal(result.data.listing); }
+        } catch { setAssignState("error"); setAssignError("Tidak bisa terhubung ke server."); }
+      },
+      (err) => { setAssignState("error"); setAssignError(err.code === 1 ? "Izin lokasi ditolak. Aktifkan di pengaturan browser." : "Lokasi tidak tersedia."); },
+      { timeout: 8000 },
+    );
+  }
   const activeListings = initialListings.filter(
     (listing) =>
       listing.type === "sale" &&
@@ -200,7 +281,163 @@ export function HomeContent({
           />
         </section>
 
+        {/* ── Membership section ── */}
+        {role === "customer" && isSubscriber === false && (
+          <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-rf-primary to-emerald-700 text-white shadow-[0px_20px_60px_rgba(21,128,61,0.30)]">
+            <div className="grid gap-0 lg:grid-cols-[1fr_auto]">
+              <div className="p-8 md:p-10">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1.5 text-xs font-extrabold uppercase tracking-wider">
+                  <span className="material-symbols-outlined text-sm" style={{fontVariationSettings:"'FILL' 1"}}>star</span>
+                  RescueFood Membership
+                </div>
+                <h2 className="font-heading text-3xl font-extrabold leading-tight tracking-tight md:text-4xl">
+                  1 porsi gratis<br />setiap hari — otomatis.
+                </h2>
+                <p className="mt-3 max-w-lg text-base font-semibold leading-7 text-white/80">
+                  AI kami mencarikan makanan rescue dari merchant terdekat dalam radius 5km, menyesuaikan preferensi dietmu, dan mengamankan porsinya sebelum habis.
+                </p>
+
+                <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                  {[
+                    { icon: "smart_toy",        text: "AI auto-assign setiap sore" },
+                    { icon: "near_me",           text: "Merchant terdekat (<5km)" },
+                    { icon: "no_food",           text: "Filter alergi otomatis" },
+                  ].map(({ icon, text }) => (
+                    <div key={text} className="flex items-center gap-2 rounded-xl bg-white/15 px-4 py-3">
+                      <span className="material-symbols-outlined text-lg" style={{fontVariationSettings:"'FILL' 1"}}>{icon}</span>
+                      <span className="text-sm font-semibold">{text}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-8 flex flex-wrap items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={handleSubscribe}
+                    disabled={subscribeLoading}
+                    className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3.5 text-sm font-extrabold text-rf-primary shadow-lg transition hover:bg-rf-surface-container disabled:opacity-60"
+                  >
+                    {subscribeLoading ? (
+                      <>
+                        <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                        Memproses…
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-base" style={{fontVariationSettings:"'FILL' 1"}}>subscriptions</span>
+                        Berlangganan Sekarang
+                      </>
+                    )}
+                  </button>
+                  <div className="text-sm font-semibold text-white/70">
+                    Mulai dari <span className="font-extrabold text-white">Rp 150.000</span> / bulan
+                  </div>
+                </div>
+              </div>
+
+              <div className="hidden items-center justify-center bg-white/10 px-10 lg:flex">
+                <div className="text-center">
+                  <p className="font-heading text-7xl font-extrabold text-white">30×</p>
+                  <p className="mt-2 text-sm font-semibold text-white/80">porsi gratis<br />per bulan</p>
+                  <div className="mx-auto mt-4 h-px w-16 bg-white/30" />
+                  <p className="mt-4 text-sm font-semibold text-white/70">
+                    Hemat hingga<br />
+                    <span className="text-xl font-extrabold text-white">Rp 1.200.000</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {role === null && (
+          <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-rf-primary to-emerald-700 text-white shadow-[0px_20px_60px_rgba(21,128,61,0.20)]">
+            <div className="flex flex-col items-center gap-4 p-8 text-center md:flex-row md:justify-between md:text-left">
+              <div>
+                <p className="text-xs font-extrabold uppercase tracking-wider text-white/70">RescueFood Membership</p>
+                <h2 className="mt-1 text-2xl font-extrabold">1 porsi gratis setiap hari — mulai Rp 150k/bulan</h2>
+                <p className="mt-1 text-sm font-semibold text-white/80">Login untuk mulai berlangganan dan nikmati AI meal assignment otomatis.</p>
+              </div>
+              <Link
+                href="/auth"
+                className="shrink-0 rounded-full bg-white px-6 py-3 text-sm font-extrabold text-rf-primary shadow-lg hover:bg-rf-surface-container"
+              >
+                Login & Bergabung
+              </Link>
+            </div>
+          </section>
+        )}
+
         <section id="marketplace" className="space-y-6">
+          {isSubscriber && (
+            <div className="overflow-hidden rounded-2xl border-2 border-rf-primary/30 bg-gradient-to-r from-rf-primary/8 to-emerald-50">
+              <div className="flex items-center justify-between gap-2 border-b border-rf-primary/20 bg-rf-primary/10 px-5 py-3">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-base text-rf-primary" style={{fontVariationSettings:"'FILL' 1"}}>verified</span>
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-rf-primary">Member Aktif</span>
+                </div>
+                <span className="rounded-full bg-rf-primary/15 px-2.5 py-0.5 text-xs font-extrabold text-rf-primary">Rp 150k/bulan</span>
+              </div>
+              <div className="px-5 py-4">
+                {assignState === "idle" && (
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="font-extrabold text-rf-text-onyx">Porsi gratis harianmu siap diklaim!</p>
+                      <p className="mt-0.5 text-sm font-semibold text-rf-text-muted">AI akan mencarikan makanan dari merchant terdekat sesuai preferensimu.</p>
+                    </div>
+                    <button type="button" onClick={claimDailyMeal}
+                      className="shrink-0 inline-flex items-center gap-2 rounded-full bg-rf-primary-container px-5 py-2.5 text-sm font-extrabold text-white shadow-sm transition hover:bg-rf-primary">
+                      <span className="material-symbols-outlined text-base" style={{fontVariationSettings:"'FILL' 1"}}>near_me</span>
+                      Cari Porsi Terdekat
+                    </button>
+                  </div>
+                )}
+                {(assignState === "locating" || assignState === "assigning") && (
+                  <div className="flex items-center gap-3 py-1">
+                    <svg className="h-5 w-5 animate-spin text-rf-primary" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                    <p className="font-semibold text-rf-text-muted">{assignState === "locating" ? "Mendapatkan lokasimu…" : "AI sedang mencari makanan terdekat…"}</p>
+                  </div>
+                )}
+                {assignState === "done" && assignedMeal && (
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <span className="material-symbols-outlined mt-0.5 text-2xl text-rf-primary" style={{fontVariationSettings:"'FILL' 1"}}>check_circle</span>
+                      <div>
+                        <p className="font-extrabold text-rf-primary">Porsi berhasil diamankan!</p>
+                        <p className="mt-0.5 text-sm font-bold text-rf-text-onyx">{assignedMeal.title} — {assignedMeal.merchantName}</p>
+                        <p className="text-xs font-semibold text-rf-text-muted">{assignedMeal.pickupLocation}</p>
+                        <Link href="/profile" className="mt-2 inline-flex items-center gap-1 text-xs font-extrabold text-rf-primary hover:underline">
+                          <span className="material-symbols-outlined text-sm">receipt_long</span>
+                          Lihat pickup code di Orders
+                        </Link>
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => setAssignState("idle")} className="shrink-0 text-rf-text-muted hover:text-rf-text-onyx">
+                      <span className="material-symbols-outlined text-base">close</span>
+                    </button>
+                  </div>
+                )}
+                {assignState === "already" && (
+                  <div className="flex items-center gap-3">
+                    <span className="material-symbols-outlined text-xl text-rf-secondary" style={{fontVariationSettings:"'FILL' 1"}}>event_available</span>
+                    <div>
+                      <p className="font-extrabold text-rf-text-onyx">Porsi hari ini sudah diamankan.</p>
+                      <Link href="/profile" className="text-sm font-semibold text-rf-primary hover:underline">Cek pickup code di halaman Orders →</Link>
+                    </div>
+                  </div>
+                )}
+                {assignState === "error" && (
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-base text-rf-error" style={{fontVariationSettings:"'FILL' 1"}}>error</span>
+                      <p className="text-sm font-semibold text-rf-error">{assignError}</p>
+                    </div>
+                    <button type="button" onClick={() => setAssignState("idle")} className="shrink-0 text-sm font-extrabold text-rf-error hover:underline">Coba lagi</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           <div className="flex items-end justify-between">
             <div>
               <h2 className="font-heading text-[32px] font-bold leading-10 tracking-[-0.01em] text-rf-text-onyx">
@@ -347,7 +584,8 @@ function CategoryPill({
 }
 
 function FoodCard({ listing, image }: { listing: FoodListing; image: string }) {
-  const discount = `Diskon ${Math.max(0, Math.round((1 - listing.rescuePrice / listing.originalPrice) * 100))}%`;
+  const displayPrice = listing.currentPrice ?? listing.rescuePrice;
+  const discount = `Diskon ${Math.max(0, Math.round((1 - displayPrice / listing.originalPrice) * 100))}%`;
 
   return (
     <Link
@@ -391,7 +629,7 @@ function FoodCard({ listing, image }: { listing: FoodListing; image: string }) {
         </p>
         <div className="flex items-center gap-2 pt-2">
           <span className="font-bold text-rf-primary">
-            Rp {listing.rescuePrice.toLocaleString("id-ID")}
+            Rp {displayPrice.toLocaleString("id-ID")}
           </span>
           <span className="text-xs text-rf-outline line-through">
             Rp {listing.originalPrice.toLocaleString("id-ID")}

@@ -1,6 +1,8 @@
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { fail, ok } from "@/lib/api-response";
+import { calculateDynamicPrice } from "@/lib/dynamic-pricing";
+import { estimateCo2SavedGrams } from "@/lib/co2-estimator";
 
 export async function GET() {
   const listings = await prisma.foodListing.findMany({
@@ -16,7 +18,18 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
 
-  return ok(listings);
+  const enriched = listings.map((listing) => {
+    const { currentPrice, platformFee } = calculateDynamicPrice(
+      listing.originalPrice,
+      listing.floorPrice,
+      listing.pickupStartTime,
+      listing.pickupEndTime,
+      listing.viewCount,
+    );
+    return { ...listing, currentPrice, platformFee };
+  });
+
+  return ok(enriched);
 }
 
 export async function POST(request: Request) {
@@ -52,6 +65,16 @@ export async function POST(request: Request) {
     return fail("title, pickupStartTime, and pickupEndTime are required");
   }
 
+  const allergenTags: string[] = Array.isArray(body.allergenTags)
+    ? body.allergenTags.filter((t: unknown) => typeof t === "string")
+    : [];
+
+  const co2SavedGrams = await estimateCo2SavedGrams(
+    body.title ?? "",
+    body.category ?? "snack",
+    Number(body.quantity ?? 1),
+  );
+
   const listing = await prisma.foodListing.create({
     data: {
       merchantId: currentUser.merchantId,
@@ -61,6 +84,7 @@ export async function POST(request: Request) {
       imageUrl: body.imageUrl ?? "",
       originalPrice: Number(body.originalPrice ?? 0),
       discountedPrice: Number(body.discountedPrice ?? 0),
+      floorPrice: Number(body.floorPrice ?? 0),
       quantity: Number(body.quantity ?? 1),
       mode: body.mode === "DONATION" ? "DONATION" : "SALE",
       pickupLocation: body.pickupLocation ?? merchant.address,
@@ -76,7 +100,9 @@ export async function POST(request: Request) {
       pickupEndTime: new Date(body.pickupEndTime),
       consumeBefore: new Date(body.consumeBefore ?? body.pickupEndTime),
       allergenInfo: body.allergenInfo ?? null,
-      impactKgCo2: Number(body.impactKgCo2 ?? 0),
+      allergenTags,
+      impactKgCo2: Math.round(co2SavedGrams / 1000),
+      co2SavedGrams,
       status: "ACTIVE",
     },
     include: {

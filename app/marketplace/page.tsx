@@ -1,5 +1,6 @@
 import { HomeContent } from "@/components/home-content";
 import { mapApiListingToFoodListing } from "@/lib/listing-mapper";
+import { calculateDynamicPrice } from "@/lib/dynamic-pricing";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -49,7 +50,16 @@ export default async function MarketplacePage() {
         mealsRescued,
         partnerMerchants,
       }}
-      initialListings={listings.map(mapApiListingToFoodListing)}
+      initialListings={listings.map((l) => {
+        const { currentPrice, platformFee } = calculateDynamicPrice(
+          l.originalPrice,
+          l.floorPrice,
+          l.pickupStartTime,
+          l.pickupEndTime,
+          l.viewCount,
+        );
+        return mapApiListingToFoodListing({ ...l, currentPrice, platformFee });
+      })}
     />
   );
 }

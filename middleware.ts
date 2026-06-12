@@ -15,7 +15,7 @@ export function middleware(request: NextRequest) {
         "/api/auth/login",
         "/api/auth/register",
         "/api/auth/logout",
-      ].some((path) => pathname === path);
+      ].some((path) => pathname === path) || /^\/api\/listings\/[^/]+\/view$/.test(pathname);
 
       if (!skipCsrf) {
         const csrfHeader = request.headers.get("x-rescuefood-csrf");

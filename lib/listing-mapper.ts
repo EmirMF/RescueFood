@@ -9,6 +9,11 @@ type ApiListing = {
   imageUrl: string;
   originalPrice: number;
   discountedPrice: number;
+  floorPrice?: number;
+  currentPrice?: number;
+  platformFee?: number;
+  allergenTags?: string[];
+  co2SavedGrams?: number;
   quantity: number;
   mode: "SALE" | "DONATION";
   pickupLatitude?: number | null;
@@ -82,6 +87,11 @@ export function mapApiListingToFoodListing(listing: ApiListing): FoodListing {
             : "active",
     originalPrice: listing.originalPrice,
     rescuePrice: listing.discountedPrice,
+    floorPrice: listing.floorPrice,
+    currentPrice: listing.currentPrice,
+    platformFee: listing.platformFee,
+    allergenTags: listing.allergenTags,
+    co2SavedGrams: listing.co2SavedGrams,
     quantity: listing.quantity,
     pickupWindow: formatWindow(listing.pickupStartTime, listing.pickupEndTime),
     pickupLatitude: listing.pickupLatitude ?? null,

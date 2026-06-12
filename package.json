@@ -13,6 +13,7 @@
     "test:api": "tsx scripts/api-contract.test.ts"
   },
   "dependencies": {
+    "@google/genai": "^2.8.0",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "bcryptjs": "^3.0.3",

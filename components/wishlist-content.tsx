@@ -17,6 +17,8 @@ type WishlistItem = {
     imageUrl: string;
     originalPrice: number;
     discountedPrice: number;
+    currentPrice?: number;
+    platformFee?: number;
     mode: string;
     status: string;
     pickupStartTime: string;
@@ -113,7 +115,8 @@ function WishlistCard({
   item: WishlistItem;
 }) {
   const listing = item.listing;
-  const discount = `${Math.max(0, Math.round((1 - listing.discountedPrice / listing.originalPrice) * 100))}% OFF`;
+  const displayPrice = listing.currentPrice ?? listing.discountedPrice;
+  const discount = `${Math.max(0, Math.round((1 - displayPrice / listing.originalPrice) * 100))}% OFF`;
 
   const pickupStart = new Date(listing.pickupStartTime);
   const pickupEnd = new Date(listing.pickupEndTime);
@@ -153,9 +156,9 @@ function WishlistCard({
         </p>
         <div className="flex items-center gap-2 pt-2">
           <span className="font-bold text-rf-primary">
-            {listing.discountedPrice === 0 ? "Gratis" : `Rp ${listing.discountedPrice.toLocaleString("id-ID")}`}
+            {displayPrice === 0 ? "Gratis" : `Rp ${displayPrice.toLocaleString("id-ID")}`}
           </span>
-          {listing.discountedPrice > 0 ? (
+          {displayPrice > 0 ? (
             <span className="text-xs text-rf-outline line-through">
               Rp {listing.originalPrice.toLocaleString("id-ID")}
             </span>
