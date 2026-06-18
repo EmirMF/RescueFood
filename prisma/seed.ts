@@ -28,6 +28,10 @@ function total(price: number, quantity: number) {
   return subtotal(price, quantity) + ADMIN_FEE;
 }
 
+function hoursFromNow(h: number) {
+  return new Date(Date.now() + h * 60 * 60 * 1000);
+}
+
 async function main() {
   loadEnvFile();
   ({ prisma } = await import("../lib/prisma"));
@@ -193,52 +197,108 @@ async function main() {
     },
   });
 
+  // ── Listings Green Oven Bakery ────────────────────────────────────────────
   const sourdoughBox = await prisma.foodListing.create({
     data: {
       merchantId: greenOven.id,
       title: "Sourdough & Pastry Rescue Box",
-      description:
-        "Paket roti sourdough, croissant, dan pastry dari batch sore. Cocok untuk sarapan keluarga atau sharing.",
+      description: "Paket roti sourdough, croissant, dan pastry dari batch sore. Cocok untuk sarapan keluarga atau sharing.",
       category: "bakery",
-      imageUrl:
-        "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=900&q=80",
+      imageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=900&q=80",
       originalPrice: 85000,
       discountedPrice: 42000,
+      floorPrice: 20000,
+      allergenTags: ["Gluten", "Dairy", "Egg"],
+      allergenInfo: "Contains gluten, dairy, and egg.",
       quantity: 8,
       mode: "SALE",
       pickupLocation: greenOven.address,
       pickupLatitude: greenOven.latitude,
       pickupLongitude: greenOven.longitude,
-      pickupStartTime: new Date("2026-06-01T09:00:00.000+07:00"),
-      pickupEndTime: new Date("2026-06-01T12:00:00.000+07:00"),
-      consumeBefore: new Date("2026-06-02T08:00:00.000+07:00"),
-      allergenInfo: "Contains gluten, dairy, and egg.",
+      pickupStartTime: hoursFromNow(-0.5),
+      pickupEndTime: hoursFromNow(7),
+      consumeBefore: hoursFromNow(24),
       impactKgCo2: 12,
+      co2SavedGrams: 12000,
       status: "ACTIVE",
     },
   });
 
+  await prisma.foodListing.create({
+    data: {
+      merchantId: greenOven.id,
+      title: "Mini Cake & Cookie Box",
+      description: "Assorted mini cake dan cookies dari batch harian. Manis, lembut, cocok untuk cemilan sore.",
+      category: "bakery",
+      imageUrl: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=900&q=80",
+      originalPrice: 65000,
+      discountedPrice: 32000,
+      floorPrice: 15000,
+      allergenTags: ["Gluten", "Dairy", "Egg"],
+      allergenInfo: "Contains gluten, dairy, and egg.",
+      quantity: 6,
+      mode: "SALE",
+      pickupLocation: greenOven.address,
+      pickupLatitude: greenOven.latitude,
+      pickupLongitude: greenOven.longitude,
+      pickupStartTime: hoursFromNow(-1),
+      pickupEndTime: hoursFromNow(5),
+      consumeBefore: hoursFromNow(20),
+      impactKgCo2: 8,
+      co2SavedGrams: 8000,
+      status: "ACTIVE",
+    },
+  });
+
+  await prisma.foodListing.create({
+    data: {
+      merchantId: greenOven.id,
+      title: "Roti Sisir & Roti Unyil",
+      description: "Roti sisir mentega dan roti unyil berbagai rasa dari produksi pagi. Masih empuk dan harum.",
+      category: "bakery",
+      imageUrl: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=900&q=80",
+      originalPrice: 35000,
+      discountedPrice: 18000,
+      floorPrice: 10000,
+      allergenTags: ["Gluten", "Dairy"],
+      allergenInfo: "Contains gluten and dairy.",
+      quantity: 12,
+      mode: "SALE",
+      pickupLocation: greenOven.address,
+      pickupLatitude: greenOven.latitude,
+      pickupLongitude: greenOven.longitude,
+      pickupStartTime: hoursFromNow(-2),
+      pickupEndTime: hoursFromNow(6),
+      consumeBefore: hoursFromNow(18),
+      impactKgCo2: 6,
+      co2SavedGrams: 6200,
+      status: "ACTIVE",
+    },
+  });
+
+  // ── Listings Rasa Kantin ──────────────────────────────────────────────────
   const riceBowl = await prisma.foodListing.create({
     data: {
       merchantId: rasaKantin.id,
       title: "Rice Bowl Ayam Jamur",
-      description:
-        "Rice bowl matang dari lunch service. Porsi lengkap dengan ayam jamur, sayur, dan sambal terpisah.",
+      description: "Rice bowl matang dari lunch service. Porsi lengkap dengan ayam jamur, sayur, dan sambal terpisah.",
       category: "rice_meal",
-      imageUrl:
-        "https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=900&q=80",
+      imageUrl: "https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=900&q=80",
       originalPrice: 38000,
       discountedPrice: 19000,
+      floorPrice: 10000,
+      allergenTags: ["Soy"],
+      allergenInfo: "Contains soy and garlic.",
       quantity: 15,
       mode: "SALE",
       pickupLocation: rasaKantin.address,
       pickupLatitude: rasaKantin.latitude,
       pickupLongitude: rasaKantin.longitude,
-      pickupStartTime: new Date("2026-06-01T15:00:00.000+07:00"),
-      pickupEndTime: new Date("2026-06-01T18:00:00.000+07:00"),
-      consumeBefore: new Date("2026-06-01T21:00:00.000+07:00"),
-      allergenInfo: "Contains soy and garlic.",
+      pickupStartTime: hoursFromNow(-1),
+      pickupEndTime: hoursFromNow(6),
+      consumeBefore: hoursFromNow(10),
       impactKgCo2: 24,
+      co2SavedGrams: 24000,
       status: "ACTIVE",
     },
   });
@@ -247,73 +307,129 @@ async function main() {
     data: {
       merchantId: rasaKantin.id,
       title: "Fresh Produce Pack",
-      description:
-        "Paket sayur dan buah layak konsumsi dari prep dapur harian. Baik untuk dimasak di hari yang sama.",
+      description: "Paket sayur dan buah layak konsumsi dari prep dapur harian. Baik untuk dimasak di hari yang sama.",
       category: "produce",
-      imageUrl:
-        "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=900&q=80",
+      imageUrl: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=900&q=80",
       originalPrice: 45000,
       discountedPrice: 22000,
+      floorPrice: 12000,
+      allergenTags: [],
+      allergenInfo: "No common allergens.",
       quantity: 10,
       mode: "SALE",
       pickupLocation: rasaKantin.address,
       pickupLatitude: rasaKantin.latitude,
       pickupLongitude: rasaKantin.longitude,
-      pickupStartTime: new Date("2026-06-02T10:00:00.000+07:00"),
-      pickupEndTime: new Date("2026-06-02T13:00:00.000+07:00"),
-      consumeBefore: new Date("2026-06-03T08:00:00.000+07:00"),
-      allergenInfo: "No common allergens.",
+      pickupStartTime: hoursFromNow(-0.5),
+      pickupEndTime: hoursFromNow(7.5),
+      consumeBefore: hoursFromNow(24),
       impactKgCo2: 18,
+      co2SavedGrams: 18000,
       status: "ACTIVE",
     },
   });
 
   await prisma.foodListing.create({
     data: {
-      merchantId: greenOven.id,
-      title: "Mini Cake Box",
-      description:
-        "Draft listing untuk merchant mencoba flow edit sebelum dipublikasikan.",
-      category: "snack",
-      imageUrl:
-        "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=900&q=80",
-      originalPrice: 65000,
-      discountedPrice: 32000,
-      quantity: 6,
+      merchantId: rasaKantin.id,
+      title: "Nasi Ayam Bakar 1/2 Ekor",
+      description: "Nasi ayam bakar khas Bandung. Disajikan dengan lalapan, sambal, dan kuah kaldu. Sisa makan siang.",
+      category: "rice_meal",
+      imageUrl: "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=900&q=80",
+      originalPrice: 45000,
+      discountedPrice: 22000,
+      floorPrice: 12000,
+      allergenTags: [],
+      allergenInfo: "No common allergens.",
+      quantity: 10,
       mode: "SALE",
-      pickupLocation: greenOven.address,
-      pickupLatitude: greenOven.latitude,
-      pickupLongitude: greenOven.longitude,
-      pickupStartTime: new Date("2026-06-03T14:00:00.000+07:00"),
-      pickupEndTime: new Date("2026-06-03T17:00:00.000+07:00"),
-      consumeBefore: new Date("2026-06-04T08:00:00.000+07:00"),
-      allergenInfo: "Contains gluten, dairy, and egg.",
-      impactKgCo2: 8,
-      status: "DRAFT",
+      pickupLocation: rasaKantin.address,
+      pickupLatitude: rasaKantin.latitude,
+      pickupLongitude: rasaKantin.longitude,
+      pickupStartTime: hoursFromNow(-1),
+      pickupEndTime: hoursFromNow(5),
+      consumeBefore: hoursFromNow(9),
+      impactKgCo2: 20,
+      co2SavedGrams: 20000,
+      status: "ACTIVE",
     },
   });
 
+  await prisma.foodListing.create({
+    data: {
+      merchantId: rasaKantin.id,
+      title: "Nasi Goreng Sapi Special",
+      description: "Nasi goreng sapi dengan telur dan acar. Sisa dari catering siang, masih panas dan lezat.",
+      category: "rice_meal",
+      imageUrl: "https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=900&q=80",
+      originalPrice: 40000,
+      discountedPrice: 20000,
+      floorPrice: 10000,
+      allergenTags: ["Egg", "Soy"],
+      allergenInfo: "Contains egg and soy.",
+      quantity: 8,
+      mode: "SALE",
+      pickupLocation: rasaKantin.address,
+      pickupLatitude: rasaKantin.latitude,
+      pickupLongitude: rasaKantin.longitude,
+      pickupStartTime: hoursFromNow(-2),
+      pickupEndTime: hoursFromNow(4),
+      consumeBefore: hoursFromNow(8),
+      impactKgCo2: 18,
+      co2SavedGrams: 18500,
+      status: "ACTIVE",
+    },
+  });
+
+  await prisma.foodListing.create({
+    data: {
+      merchantId: rasaKantin.id,
+      title: "Paket Snack Sehat",
+      description: "Kumpulan snack sehat: granola bar, energy ball, dan buah potong. Sisa dari event kantor.",
+      category: "snack",
+      imageUrl: "https://images.unsplash.com/photo-1499195333224-3ce974eecb47?auto=format&fit=crop&w=900&q=80",
+      originalPrice: 28000,
+      discountedPrice: 14000,
+      floorPrice: 7000,
+      allergenTags: ["Gluten", "Peanut"],
+      allergenInfo: "Contains gluten and peanut.",
+      quantity: 20,
+      mode: "SALE",
+      pickupLocation: rasaKantin.address,
+      pickupLatitude: rasaKantin.latitude,
+      pickupLongitude: rasaKantin.longitude,
+      pickupStartTime: hoursFromNow(-1),
+      pickupEndTime: hoursFromNow(6),
+      consumeBefore: hoursFromNow(48),
+      impactKgCo2: 5,
+      co2SavedGrams: 5400,
+      status: "ACTIVE",
+    },
+  });
+
+  // ── Donation listing ──────────────────────────────────────────────────────
   const donationListing = await prisma.foodListing.create({
     data: {
       merchantId: rasaKantin.id,
       title: "Nasi Box Donasi Komunitas",
-      description:
-        "Nasi box matang dari event kampus. Backend donation tetap ada walaupun charity web disembunyikan.",
+      description: "Nasi box matang dari event kampus. Tersedia untuk donasi komunitas.",
       category: "rice_meal",
-      imageUrl:
-        "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=900&q=80",
+      imageUrl: "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=900&q=80",
       originalPrice: 30000,
       discountedPrice: 0,
+      floorPrice: 0,
+      allergenTags: [],
+      allergenInfo: "Ask merchant for allergen details.",
       quantity: 24,
       mode: "DONATION",
       pickupLocation: rasaKantin.address,
       pickupLatitude: rasaKantin.latitude,
       pickupLongitude: rasaKantin.longitude,
-      pickupStartTime: new Date("2026-06-02T16:00:00.000+07:00"),
-      pickupEndTime: new Date("2026-06-02T18:00:00.000+07:00"),
-      consumeBefore: new Date("2026-06-02T21:00:00.000+07:00"),
-      allergenInfo: "Ask merchant for allergen details.",
+      pickupStartTime: hoursFromNow(-1),
+      pickupEndTime: hoursFromNow(3),
+      consumeBefore: hoursFromNow(7),
       impactKgCo2: 35,
+      co2SavedGrams: 35000,
       status: "ACTIVE",
     },
   });
@@ -325,13 +441,13 @@ async function main() {
       merchantId: greenOven.id,
       quantity: 1,
       adminFee: ADMIN_FEE,
-      totalPrice: total(sourdoughBox.discountedPrice, 1),
+      totalPrice: total(42000, 1),
       status: "READY_FOR_PICKUP",
       pickupCode: "RF-4821",
       paymentStatus: "PAID",
       paymentMethod: "qris",
       midtransOrderId: "RF-SEED-4821",
-      paidAt: new Date("2026-05-31T10:00:00.000+07:00"),
+      paidAt: new Date(),
     },
   });
 
@@ -342,13 +458,13 @@ async function main() {
       merchantId: greenOven.id,
       quantity: 2,
       adminFee: ADMIN_FEE,
-      totalPrice: total(sourdoughBox.discountedPrice, 2),
+      totalPrice: total(42000, 2),
       status: "COMPLETED",
       pickupCode: "RF-4822",
       paymentStatus: "PAID",
       paymentMethod: "bank_transfer",
       midtransOrderId: "RF-SEED-4822",
-      paidAt: new Date("2026-05-30T16:30:00.000+07:00"),
+      paidAt: new Date(),
     },
   });
 
@@ -359,13 +475,13 @@ async function main() {
       merchantId: rasaKantin.id,
       quantity: 3,
       adminFee: ADMIN_FEE,
-      totalPrice: total(riceBowl.discountedPrice, 3),
+      totalPrice: total(19000, 3),
       status: "COMPLETED",
       pickupCode: "RF-4823",
       paymentStatus: "PAID",
       paymentMethod: "qris",
       midtransOrderId: "RF-SEED-4823",
-      paidAt: new Date("2026-05-31T12:15:00.000+07:00"),
+      paidAt: new Date(),
     },
   });
 
@@ -376,7 +492,7 @@ async function main() {
       merchantId: rasaKantin.id,
       quantity: 1,
       adminFee: ADMIN_FEE,
-      totalPrice: total(producePack.discountedPrice, 1),
+      totalPrice: total(22000, 1),
       status: "PENDING",
       pickupCode: "RF-4824",
       paymentStatus: "PENDING",
